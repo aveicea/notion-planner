@@ -39,13 +39,25 @@ window.toggleDDaySelector = async function() {
     return;
   }
 
-  // '디데이 표시' 체크된 항목만 필터링
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // '디데이 표시' 체크된 항목 중 미래 날짜만 필터링
   const ddayItems = ddayData.results.filter(item => {
-    return item.properties?.['디데이 표시']?.checkbox === true;
+    if (item.properties?.['디데이 표시']?.checkbox !== true) return false;
+
+    const dateStr = item.properties?.['날짜']?.date?.start;
+    if (!dateStr) return false;
+
+    const itemDate = new Date(dateStr);
+    itemDate.setHours(0, 0, 0, 0);
+
+    // 오늘이거나 미래 날짜만
+    return itemDate >= today;
   });
 
   if (ddayItems.length === 0) {
-    content.innerHTML = '<div class="empty-message">디데이 표시된 항목이 없습니다.</div>';
+    content.innerHTML = '<div class="empty-message">디데이 표시된 미래 항목이 없습니다.</div>';
     return;
   }
 
@@ -218,7 +230,7 @@ window.toggleCalendarView = async function(targetDate = null) {
   if (calendarViewMode) {
     // 프리플랜으로 진입
     plannerCalendarViewMode = false;
-    viewToggle.textContent = '달력';
+    viewToggle.textContent = 'LIST';
 
     // 오늘 기준으로 앞으로 2주 보기
     calendarStartDate = new Date();
@@ -878,8 +890,10 @@ function setupEventListeners() {
   const viewToggle = document.getElementById('view-toggle');
   viewToggle.addEventListener('click', () => {
     if (calendarViewMode) {
-      // 프리플랜 화면에서는 달력 통계 토글
-      togglePlannerCalendar();
+      // 프리플랜 화면에서는 LIST/CALENDAR 토글
+      plannerCalendarViewMode = !plannerCalendarViewMode;
+      viewToggle.textContent = plannerCalendarViewMode ? 'CALENDAR' : 'LIST';
+      renderCalendarView();
     } else {
       // 플래너 화면에서는 TIME TABLE / TASK 전환
       viewMode = viewMode === 'timeline' ? 'task' : 'timeline';
@@ -1894,9 +1908,21 @@ window.syncPlannerToCalendar = async function() {
 };
 
 function renderCalendarView() {
-  if (!calendarData || !calendarData.results) return;
-
   const content = document.getElementById('content');
+
+  // CALENDAR 모드일 때는 플래너 통계만 표시
+  if (plannerCalendarViewMode) {
+    content.innerHTML = `
+      <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px; gap: 4px;">
+        <button onclick="toggleCalendarView()" style="font-size: 12px; padding: 4px 8px;">닫기</button>
+      </div>
+      ${renderPlannerCalendarHTML()}
+    `;
+    return;
+  }
+
+  // LIST 모드일 때는 프리플랜 리스트 표시
+  if (!calendarData || !calendarData.results) return;
 
   // 날짜별로 그룹화
   const groupedByDate = {};
@@ -1971,11 +1997,6 @@ function renderCalendarView() {
   html += `
     <button onclick="loadNextCalendar()" style="width: 100%; background: #e5e5e7; color: #333; border: none; border-radius: 4px; padding: 8px; font-size: 11px; cursor: pointer; margin-top: 4px;">더보기</button>
   `;
-
-  // plannerCalendarViewMode가 true일 때 플래너 시간 통계 달력 추가
-  if (plannerCalendarViewMode) {
-    html += renderPlannerCalendarHTML();
-  }
 
   content.innerHTML = html;
   initCalendarDragDrop();
