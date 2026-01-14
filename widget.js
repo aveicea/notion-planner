@@ -134,18 +134,48 @@ function renderPlannerCalendarHTML() {
     }
   });
 
-  // 날짜 정렬 (최신순)
-  const sortedDates = Object.keys(tasksByDate).sort((a, b) => b.localeCompare(a));
+  // 현재 월의 첫날과 마지막날 계산
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth();
+
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+
+  // 달력 시작일 (첫주 일요일)
+  const calendarStart = new Date(firstDay);
+  calendarStart.setDate(calendarStart.getDate() - calendarStart.getDay());
+
+  // 달력 끝일 (마지막주 토요일)
+  const calendarEnd = new Date(lastDay);
+  calendarEnd.setDate(calendarEnd.getDate() + (6 - calendarEnd.getDay()));
 
   let html = `
-    <div style="margin-top: 24px; padding-top: 20px; border-top: 2px solid #e5e5e7;">
-      <h3 style="margin-bottom: 12px; font-size: 14px; font-weight: 600; color: #333;">📊 플래너 통계</h3>
-      <div style="display: flex; flex-direction: column; gap: 12px;">
+    <div style="padding: 12px;">
+      <h3 style="text-align: center; margin-bottom: 16px; font-size: 16px; font-weight: 600;">${year}년 ${month + 1}월</h3>
+
+      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px;">
+        <div style="text-align: center; font-size: 11px; color: #FF3B30; font-weight: 600; padding: 4px;">일</div>
+        <div style="text-align: center; font-size: 11px; color: #666; font-weight: 600; padding: 4px;">월</div>
+        <div style="text-align: center; font-size: 11px; color: #666; font-weight: 600; padding: 4px;">화</div>
+        <div style="text-align: center; font-size: 11px; color: #666; font-weight: 600; padding: 4px;">수</div>
+        <div style="text-align: center; font-size: 11px; color: #666; font-weight: 600; padding: 4px;">목</div>
+        <div style="text-align: center; font-size: 11px; color: #666; font-weight: 600; padding: 4px;">금</div>
+        <div style="text-align: center; font-size: 11px; color: #007AFF; font-weight: 600; padding: 4px;">토</div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;">
   `;
 
-  sortedDates.forEach(dateStr => {
-    const tasks = tasksByDate[dateStr];
-    const dateLabel = formatDateLabel(dateStr);
+  const currentLoop = new Date(calendarStart);
+  const todayStr = today.toISOString().split('T')[0];
+
+  while (currentLoop <= calendarEnd) {
+    const dateStr = currentLoop.toISOString().split('T')[0];
+    const date = currentLoop.getDate();
+    const isCurrentMonth = currentLoop.getMonth() === month;
+    const isToday = dateStr === todayStr;
+    const tasks = tasksByDate[dateStr] || [];
 
     // 시간 통계 계산
     let totalTarget = 0;
@@ -174,21 +204,35 @@ function renderPlannerCalendarHTML() {
     });
 
     const totalDiff = totalActual - totalTarget;
-    const diffSign = totalDiff === 0 ? '±' : (totalDiff > 0 ? '+' : '-');
-    const diffAbs = Math.abs(totalDiff);
+    const diffSign = totalDiff === 0 ? '±' : (totalDiff > 0 ? '+' : '');
     const diffColor = totalDiff > 0 ? '#FF3B30' : totalDiff < 0 ? '#34C759' : '#666';
 
+    const dayOfWeek = currentLoop.getDay();
+    const dayColor = dayOfWeek === 0 ? '#FF3B30' : dayOfWeek === 6 ? '#007AFF' : '#333';
+
     html += `
-      <div style="background: #fff; border: 1px solid #e5e5e7; border-radius: 10px; padding: 12px;">
-        <div style="font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; cursor: pointer;" onclick="goToDate('${dateStr}')">${dateLabel}</div>
-        <div style="font-size: 11px; color: #86868b; line-height: 1.6;">
-          <div>목표 ${formatMinutesToTime(totalTarget)}</div>
-          <div>실제 ${formatMinutesToTime(totalActual)}</div>
-          <div style="color: ${diffColor};">(${diffSign}${formatMinutesToTime(diffAbs)})</div>
-        </div>
+      <div onclick="goToDate('${dateStr}')" style="
+        background: ${isToday ? '#007AFF' : '#f5f5f7'};
+        border: 1px solid ${isToday ? '#007AFF' : '#e5e5e7'};
+        border-radius: 8px;
+        padding: 6px;
+        min-height: 70px;
+        cursor: pointer;
+        opacity: ${isCurrentMonth ? '1' : '0.3'};
+      ">
+        <div style="font-size: 12px; font-weight: 600; color: ${isToday ? 'white' : dayColor}; margin-bottom: 4px;">${date}</div>
+        ${tasks.length > 0 ? `
+          <div style="font-size: 9px; color: ${isToday ? 'rgba(255,255,255,0.9)' : '#86868b'}; line-height: 1.3;">
+            <div>목표 ${formatMinutesToTime(totalTarget)}</div>
+            <div>실제 ${formatMinutesToTime(totalActual)}</div>
+            <div style="color: ${isToday ? 'white' : diffColor}; font-weight: 600;">${diffSign}${formatMinutesToTime(Math.abs(totalDiff))}</div>
+          </div>
+        ` : ''}
       </div>
     `;
-  });
+
+    currentLoop.setDate(currentLoop.getDate() + 1);
+  }
 
   html += `
       </div>
