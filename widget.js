@@ -31,6 +31,15 @@ window.goToday = function() {
 window.toggleDDaySelector = async function() {
   const content = document.getElementById('content');
 
+  // 이미 열려있으면 닫기
+  if (ddaySelectorOpen) {
+    ddaySelectorOpen = false;
+    renderData();
+    return;
+  }
+
+  ddaySelectorOpen = true;
+
   // D-Day 데이터 가져오기
   await fetchDDayData();
 
@@ -117,6 +126,7 @@ window.selectDDay = function(date, title, itemId) {
   dDayTitle = title;
   localStorage.setItem('dDayDate', date);
   localStorage.setItem('dDayTitle', title);
+  ddaySelectorOpen = false;
   updateDDayButton();
   renderData();
 };
@@ -126,6 +136,7 @@ window.clearDDay = function() {
   dDayTitle = null;
   localStorage.removeItem('dDayDate');
   localStorage.removeItem('dDayTitle');
+  ddaySelectorOpen = false;
   updateDDayButton();
   renderData();
 };
@@ -171,9 +182,24 @@ function autoSelectClosestDDay() {
 }
 
 let plannerCalendarViewMode = false;
+let calendarViewYear = new Date().getFullYear();
+let calendarViewMonth = new Date().getMonth();
+let ddaySelectorOpen = false;
 
 window.togglePlannerCalendar = function() {
   plannerCalendarViewMode = !plannerCalendarViewMode;
+  renderCalendarView();
+};
+
+window.changeCalendarMonth = function(delta) {
+  calendarViewMonth += delta;
+  if (calendarViewMonth > 11) {
+    calendarViewMonth = 0;
+    calendarViewYear++;
+  } else if (calendarViewMonth < 0) {
+    calendarViewMonth = 11;
+    calendarViewYear--;
+  }
   renderCalendarView();
 };
 
@@ -194,8 +220,8 @@ function renderPlannerCalendarHTML() {
 
   // 현재 월의 첫날과 마지막날 계산
   const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth();
+  const year = calendarViewYear;
+  const month = calendarViewMonth;
 
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -210,7 +236,11 @@ function renderPlannerCalendarHTML() {
 
   let html = `
     <div style="padding: 12px;">
-      <h3 style="text-align: center; margin-bottom: 16px; font-size: 16px; font-weight: 600;">${year}년 ${month + 1}월</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <button onclick="changeCalendarMonth(-1)" style="font-size: 16px; padding: 4px 8px; background: none; border: none; cursor: pointer; color: #999;">◀</button>
+        <h3 style="margin: 0; font-size: 16px; font-weight: 600;">${year}년 ${month + 1}월</h3>
+        <button onclick="changeCalendarMonth(1)" style="font-size: 16px; padding: 4px 8px; background: none; border: none; cursor: pointer; color: #999;">▶</button>
+      </div>
 
       <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 4px;">
         <div style="text-align: center; font-size: 11px; color: #FF3B30; font-weight: 600; padding: 4px;">일</div>
