@@ -12,6 +12,7 @@ let calendarViewMode = false;
 let calendarStartDate = new Date();
 let calendarEndDate = new Date();
 let lastSyncedItems = []; // 마지막 동기화로 생성된 항목 ID들
+let dDayDate = localStorage.getItem('dDayDate') || null; // D-Day 날짜
 
 // 전역 함수 등록
 window.changeDate = function(days) {
@@ -23,6 +24,38 @@ window.goToday = function() {
   currentDate = new Date();
   renderData();
 };
+
+window.toggleDDay = function() {
+  if (dDayDate) {
+    // D-Day가 설정되어 있으면 해제
+    dDayDate = null;
+    localStorage.removeItem('dDayDate');
+  } else {
+    // D-Day 설정 (날짜 입력 받기)
+    const dateInput = prompt('D-Day 날짜를 입력하세요 (예: 2026-03-15)');
+    if (dateInput) {
+      dDayDate = dateInput;
+      localStorage.setItem('dDayDate', dateInput);
+    }
+  }
+  renderData();
+};
+
+function getDDayString() {
+  if (!dDayDate) return '';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const targetDate = new Date(dDayDate);
+  targetDate.setHours(0, 0, 0, 0);
+
+  const diffTime = targetDate - today;
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays === 0) return ' D-Day';
+  if (diffDays > 0) return ` D-${diffDays}`;
+  return ` D+${Math.abs(diffDays)}`;
+}
 
 window.toggleCalendarView = async function() {
   calendarViewMode = !calendarViewMode;
@@ -842,7 +875,7 @@ function renderData() {
 
 function renderTimelineView() {
   const targetDateStr = currentDate.toISOString().split('T')[0];
-  
+
   const dayTasks = currentData.results.filter(item => {
     const dateStart = item.properties?.['날짜']?.date?.start;
     return dateStart && dateStart === targetDateStr;
@@ -851,34 +884,34 @@ function renderTimelineView() {
   // 완료 안 한 일 먼저, 그 다음 완료한 일
   const incompleteTasks = dayTasks.filter(t => !t.properties?.['완료']?.checkbox);
   const completedTasks = dayTasks.filter(t => t.properties?.['완료']?.checkbox);
-  
+
   const sortTasks = (tasks) => {
     return tasks.sort((a, b) => {
       const aStart = a.properties?.['시작']?.rich_text?.[0]?.plain_text || '';
       const bStart = b.properties?.['시작']?.rich_text?.[0]?.plain_text || '';
-      
+
       if (aStart && bStart) return aStart.localeCompare(bStart);
       if (aStart) return -1;
       if (bStart) return 1;
-      
+
       const priorityOrder = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
       const aPriority = a.properties?.['우선순위']?.select?.name || '10th';
       const bPriority = b.properties?.['우선순위']?.select?.name || '10th';
       const priorityCompare = priorityOrder.indexOf(aPriority) - priorityOrder.indexOf(bPriority);
-      
+
       if (priorityCompare !== 0) return priorityCompare;
-      
+
       const aTitle = getTaskTitle(a);
       const bTitle = getTaskTitle(b);
       return aTitle.localeCompare(bTitle);
     });
   };
-  
+
   const sortedTasks = [...sortTasks(incompleteTasks), ...sortTasks(completedTasks)];
 
   const content = document.getElementById('content');
-  const dateLabel = formatDateLabel(targetDateStr);
-  
+  const dateLabel = formatDateLabelShort(targetDateStr);
+
   let html = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <button onclick="changeDate(-1)" style="font-size: 16px; padding: 4px 12px; color: #999;">◀</button>
@@ -962,8 +995,8 @@ function renderTimelineView() {
               ${diffStr ? `<span>📊 계획 ${diffStr}분</span>` : ''}
             </div>
             <span style="cursor: pointer; font-size: 16px; position: relative; display: inline-block; width: 20px; height: 20px; flex-shrink: 0;">
-              📅
-              <input type="date" value="${dateStart}" 
+              →
+              <input type="date" value="${dateStart}"
                 onchange="updateDate('${task.id}', this.value)"
                 style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
             </span>
@@ -979,19 +1012,19 @@ function renderTimelineView() {
 
 function renderTaskView() {
   const targetDateStr = currentDate.toISOString().split('T')[0];
-  
+
   // 날짜 필터
   const dayTasks = currentData.results.filter(item => {
     const dateStart = item.properties?.['날짜']?.date?.start;
     return dateStart && dateStart === targetDateStr;
   });
-  
+
   // 완료 안 한 일 먼저
   const incompleteTasks = dayTasks.filter(t => !t.properties?.['완료']?.checkbox);
   const completedTasks = dayTasks.filter(t => t.properties?.['완료']?.checkbox);
-  
+
   const priorityOrder = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th'];
-  
+
   const sortByPriority = (tasks) => {
     return tasks.sort((a, b) => {
       const aPriority = a.properties?.['우선순위']?.select?.name || '10th';
@@ -999,16 +1032,20 @@ function renderTaskView() {
       return priorityOrder.indexOf(aPriority) - priorityOrder.indexOf(bPriority);
     });
   };
-  
+
   const allTasks = [...sortByPriority(incompleteTasks), ...sortByPriority(completedTasks)];
 
   const content = document.getElementById('content');
-  const dateLabel = formatDateLabel(targetDateStr);
-  
+  const dateLabel = formatDateLabelShort(targetDateStr);
+  const dDayStr = getDDayString();
+
   let html = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <button onclick="changeDate(-1)" style="font-size: 16px; padding: 4px 12px; color: #999;">◀</button>
-      <h3 class="section-title" style="margin: 0; cursor: pointer;" onclick="goToday()">${dateLabel}</h3>
+      <div style="display: flex; align-items: center; gap: 4px;">
+        <h3 class="section-title" style="margin: 0; cursor: pointer;" onclick="goToday()">${dateLabel}</h3>
+        <button onclick="toggleDDay()" style="font-size: 11px; padding: 2px 6px; background: ${dDayDate ? '#007AFF' : '#ccc'}; color: white; border: none; border-radius: 4px; cursor: pointer;">${dDayStr || 'D-Day'}</button>
+      </div>
       <button onclick="changeDate(1)" style="font-size: 16px; padding: 4px 12px; color: #999;">▶</button>
     </div>
     <button onclick="addNewTask()" style="width: 100%; margin-bottom: 12px; padding: 8px; background: #999; color: white; border-radius: 8px; cursor: pointer; border: none; font-size: 13px;">+ 할일 추가</button>
@@ -1032,8 +1069,8 @@ function renderTaskView() {
               ${targetTime ? `<span>⏱ ${targetTime}분</span>` : ''}
               ${dateStart ? `<span style="font-size: 10px;">${formatDateShort(dateStart)}</span>` : ''}
               <span style="cursor: pointer; font-size: 14px; position: relative; display: inline-block; width: 18px; height: 18px;">
-                📅
-                <input type="date" value="${dateStart}" 
+                →
+                <input type="date" value="${dateStart}"
                   onchange="updateDateInTask('${task.id}', this.value)"
                   style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
               </span>
@@ -1161,6 +1198,13 @@ function formatDateLabel(dateString) {
   const days = ['일', '월', '화', '수', '목', '금', '토'];
   const dayOfWeek = days[date.getDay()];
   return `${date.getFullYear()}년 ${date.getMonth() + 1}월 ${date.getDate()}일 (${dayOfWeek})`;
+}
+
+function formatDateLabelShort(dateString) {
+  const date = new Date(dateString);
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const dayOfWeek = days[date.getDay()];
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 (${dayOfWeek})`;
 }
 
 function formatDateShort(dateString) {
@@ -1538,14 +1582,13 @@ function renderCalendarView() {
     currentLoopDate.setDate(currentLoopDate.getDate() + 1);
   }
 
+  const today = new Date().toISOString().split('T')[0];
+
   let html = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-      <h3 class="section-title" style="margin: 0;">📅 달력</h3>
-      <div style="display: flex; gap: 4px; align-items: center;">
-        <button onclick="undoCalendarSync()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="되돌리기">↩️</button>
-        <button onclick="syncPlannerToCalendar()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="플래너 동기화">🔄</button>
-        <button onclick="toggleCalendarView()" style="font-size: 12px; padding: 4px 8px;">닫기</button>
-      </div>
+    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px; gap: 4px;">
+      <button onclick="undoCalendarSync()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="되돌리기">↩️</button>
+      <button onclick="syncPlannerToCalendar()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="플래너 동기화">🔄</button>
+      <button onclick="toggleCalendarView()" style="font-size: 12px; padding: 4px 8px;">닫기</button>
     </div>
     <button onclick="loadPrevCalendar()" style="width: 100%; background: #e5e5e7; color: #333; border: none; border-radius: 4px; padding: 8px; font-size: 11px; cursor: pointer; margin-bottom: 12px;">⬆ 이전 2주 더보기</button>
   `;
@@ -1553,11 +1596,13 @@ function renderCalendarView() {
   allDates.forEach(dateStr => {
     const items = groupedByDate[dateStr] || [];
     const dateLabel = formatDateLabel(dateStr);
+    const isToday = dateStr === today;
+    const dateStyle = isToday ? 'font-size: 13px; font-weight: 700; color: #333; margin: 0;' : 'font-size: 13px; font-weight: 600; color: #666; margin: 0;';
 
     html += `
       <div style="margin-bottom: 20px;">
         <div style="display: flex; align-items: center; margin-bottom: 8px;">
-          <h4 style="font-size: 13px; font-weight: 600; color: #666; margin: 0;">${dateLabel}</h4>
+          <h4 style="${dateStyle}">${dateLabel}</h4>
           ${items.length > 0 ? `<button onclick="saveToPlanner('${dateStr}')" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer; margin-left: 4px;" title="플래너에 저장">💾</button>` : ''}
         </div>
         <div class="calendar-date-group" data-date="${dateStr}">
