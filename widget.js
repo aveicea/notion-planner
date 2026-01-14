@@ -1,11 +1,13 @@
 const NOTION_API_KEY = "secret_pNLmc1M6IlbkoiwoUrKnE2mzJlJGYZ61eppTt5tRZuR";
 const DATABASE_ID = "468bf987e6cd4372abf96a8f30f165b1";
 const CALENDAR_DB_ID = "ddfee91eec854db08c445b0fa1abd347";
+const DDAY_DB_ID = "3ca479d92a3340b7813608b6dd7f4eac";
 const CORS_PROXY = "https://corsproxy.io/?";
 
 let viewMode = 'timeline';
 let currentData = null;
 let calendarData = null;
+let ddayData = null;
 let bookNames = {};
 let currentDate = new Date();
 let calendarViewMode = false;
@@ -13,6 +15,7 @@ let calendarStartDate = new Date();
 let calendarEndDate = new Date();
 let lastSyncedItems = []; // 마지막 동기화로 생성된 항목 ID들
 let dDayDate = localStorage.getItem('dDayDate') || null; // D-Day 날짜
+let dDayTitle = localStorage.getItem('dDayTitle') || null; // D-Day 제목
 
 // 전역 함수 등록
 window.changeDate = function(days) {
@@ -25,36 +28,76 @@ window.goToday = function() {
   renderData();
 };
 
-window.setupDDayPicker = function() {
-  const picker = document.getElementById('dday-date-picker');
-  const button = document.getElementById('dday-button');
-  if (!picker || !button) return;
+window.toggleDDaySelector = async function() {
+  const content = document.getElementById('content');
 
-  // 현재 D-Day 값 설정
-  if (dDayDate) {
-    picker.value = dDayDate;
+  // D-Day 데이터 가져오기
+  await fetchDDayData();
+
+  if (!ddayData || !ddayData.results) {
+    content.innerHTML = '<div class="empty-message">D-Day 항목을 불러올 수 없습니다.</div>';
+    return;
   }
 
-  // 날짜 선택 시
-  picker.addEventListener('change', (e) => {
-    const selectedDate = e.target.value;
-    if (selectedDate) {
-      dDayDate = selectedDate;
-      localStorage.setItem('dDayDate', selectedDate);
-      updateDDayButton();
-      if (currentData) renderData();
-    }
+  // '디데이 표시' 체크된 항목만 필터링
+  const ddayItems = ddayData.results.filter(item => {
+    return item.properties?.['디데이 표시']?.checkbox === true;
   });
 
-  // 버튼 더블클릭 시 D-Day 제거
-  button.addEventListener('dblclick', (e) => {
-    e.preventDefault();
-    dDayDate = null;
-    localStorage.removeItem('dDayDate');
-    picker.value = '';
-    updateDDayButton();
-    if (currentData) renderData();
+  if (ddayItems.length === 0) {
+    content.innerHTML = '<div class="empty-message">디데이 표시된 항목이 없습니다.</div>';
+    return;
+  }
+
+  let html = `
+    <div style="padding: 20px;">
+      <h3 style="margin-bottom: 12px;">D-Day 선택</h3>
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+  `;
+
+  ddayItems.forEach(item => {
+    const title = item.properties?.['제목']?.title?.[0]?.plain_text || '제목 없음';
+    const date = item.properties?.['날짜']?.date?.start || '';
+    const isSelected = dDayDate === date;
+
+    html += `
+      <button onclick="selectDDay('${date}', '${title.replace(/'/g, "\\'")}', '${item.id}')"
+        style="padding: 12px; background: ${isSelected ? '#007AFF' : '#f5f5f7'}; color: ${isSelected ? 'white' : '#333'};
+        border: 1px solid ${isSelected ? '#007AFF' : '#e5e5e7'}; border-radius: 8px; cursor: pointer; text-align: left; font-size: 13px;">
+        <div style="font-weight: 500;">${title}</div>
+        <div style="font-size: 11px; opacity: 0.8; margin-top: 4px;">${date}</div>
+      </button>
+    `;
   });
+
+  html += `
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px;">
+        <button onclick="renderData()" style="padding: 8px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer;">닫기</button>
+        <button onclick="clearDDay()" style="padding: 8px; background: #FF3B30; color: white; border: none; border-radius: 4px; cursor: pointer;">D-Day 제거</button>
+      </div>
+    </div>
+  `;
+
+  content.innerHTML = html;
+};
+
+window.selectDDay = function(date, title, itemId) {
+  dDayDate = date;
+  dDayTitle = title;
+  localStorage.setItem('dDayDate', date);
+  localStorage.setItem('dDayTitle', title);
+  updateDDayButton();
+  renderData();
+};
+
+window.clearDDay = function() {
+  dDayDate = null;
+  dDayTitle = null;
+  localStorage.removeItem('dDayDate');
+  localStorage.removeItem('dDayTitle');
+  updateDDayButton();
+  renderData();
 };
 
 function getDDayString() {
@@ -719,7 +762,6 @@ window.updateRating = async function(taskId, value) {
 document.addEventListener('DOMContentLoaded', () => {
   fetchData();
   setupEventListeners();
-  setupDDayPicker();
   setInterval(fetchData, 300000);
 
   setInterval(() => {
@@ -900,8 +942,12 @@ function renderData() {
 function updateDDayButton() {
   const ddayButton = document.getElementById('dday-button');
   if (ddayButton) {
-    const dDayStr = getDDayString();
-    ddayButton.textContent = dDayStr || 'D-Day';
+    if (dDayDate && dDayTitle) {
+      const dDayStr = getDDayString();
+      ddayButton.textContent = `${dDayTitle}${dDayStr}`;
+    } else {
+      ddayButton.textContent = 'D-Day';
+    }
     ddayButton.style.background = dDayDate ? '#999' : '#999';
   }
 }
@@ -1347,6 +1393,43 @@ async function fetchCalendarData() {
     await fetchBookNames();
   } catch (error) {
     console.error('Calendar fetch error:', error);
+  } finally {
+    loading.textContent = '';
+  }
+}
+
+async function fetchDDayData() {
+  const loading = document.getElementById('loading');
+  loading.textContent = '⏳';
+
+  try {
+    const notionUrl = `https://api.notion.com/v1/databases/${DDAY_DB_ID}/query`;
+    const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_API_KEY}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        page_size: 100,
+        sorts: [{ property: "날짜", direction: "ascending" }],
+        filter: {
+          property: "디데이 표시",
+          checkbox: {
+            equals: true
+          }
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`D-Day API Error: ${response.status}`);
+    }
+
+    ddayData = await response.json();
+  } catch (error) {
+    console.error('D-Day fetch error:', error);
   } finally {
     loading.textContent = '';
   }
