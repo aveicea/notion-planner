@@ -26,19 +26,16 @@ window.goToday = function() {
 };
 
 window.toggleDDay = function() {
-  if (dDayDate) {
-    // D-Day가 설정되어 있으면 해제
-    dDayDate = null;
-    localStorage.removeItem('dDayDate');
-  } else {
-    // D-Day 설정 (날짜 입력 받기)
-    const dateInput = prompt('D-Day 날짜를 입력하세요 (예: 2026-03-15)');
-    if (dateInput) {
-      dDayDate = dateInput;
-      localStorage.setItem('dDayDate', dateInput);
-    }
+  // 항상 날짜 입력 받기
+  const currentDDay = dDayDate ? `현재: ${dDayDate}` : '';
+  const message = currentDDay ? `D-Day 날짜를 입력하세요 (${currentDDay})` : 'D-Day 날짜를 입력하세요 (예: 2026-03-15)';
+  const dateInput = prompt(message, dDayDate || '');
+
+  if (dateInput) {
+    dDayDate = dateInput;
+    localStorage.setItem('dDayDate', dateInput);
+    renderData();
   }
-  renderData();
 };
 
 function getDDayString() {
@@ -57,7 +54,7 @@ function getDDayString() {
   return ` D+${Math.abs(diffDays)}`;
 }
 
-window.toggleCalendarView = async function() {
+window.toggleCalendarView = async function(targetDate = null) {
   calendarViewMode = !calendarViewMode;
   if (calendarViewMode) {
     // 오늘 기준으로 앞으로 2주 보기
@@ -68,6 +65,10 @@ window.toggleCalendarView = async function() {
     await fetchCalendarData();
     renderCalendarView();
   } else {
+    // targetDate가 있으면 해당 날짜로 이동
+    if (targetDate) {
+      currentDate = new Date(targetDate);
+    }
     renderData();
   }
 };
@@ -909,6 +910,34 @@ function renderTimelineView() {
 
   const sortedTasks = [...sortTasks(incompleteTasks), ...sortTasks(completedTasks)];
 
+  // 시간 통계 계산
+  let totalTarget = 0;
+  let totalActual = 0;
+  sortedTasks.forEach(task => {
+    const targetTime = task.properties?.['목표 시간']?.number || 0;
+    totalTarget += targetTime;
+
+    const end = task.properties?.['끝']?.rich_text?.[0]?.plain_text || '';
+    if (end) {
+      const actualProp = task.properties?.['실제 시간'];
+      if (actualProp?.type === 'formula') {
+        if (actualProp.formula?.type === 'number') {
+          totalActual += actualProp.formula.number || 0;
+        } else if (actualProp.formula?.type === 'string') {
+          const str = actualProp.formula.string || '';
+          const hourMatch = str.match(/(\d+)시간/);
+          const minMatch = str.match(/(\d+)분/);
+          const hours = hourMatch ? parseInt(hourMatch[1]) : 0;
+          const mins = minMatch ? parseInt(minMatch[1]) : 0;
+          totalActual += hours * 60 + mins;
+        }
+      }
+    }
+  });
+
+  const totalDiff = totalActual - totalTarget;
+  const diffStr = totalDiff === 0 ? '±0' : (totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`);
+
   const content = document.getElementById('content');
   const dateLabel = formatDateLabelShort(targetDateStr);
 
@@ -917,6 +946,11 @@ function renderTimelineView() {
       <button onclick="changeDate(-1)" style="font-size: 16px; padding: 4px 12px; color: #999;">◀</button>
       <h3 class="section-title" style="margin: 0; cursor: pointer;" onclick="goToday()">${dateLabel} (${sortedTasks.length}개)</h3>
       <button onclick="changeDate(1)" style="font-size: 16px; padding: 4px 12px; color: #999;">▶</button>
+    </div>
+    <div style="display: flex; gap: 8px; font-size: 11px; color: #86868b; margin-bottom: 12px; justify-content: center;">
+      <span>⏱ 목표 ${totalTarget}분</span>
+      <span>⏳ 실제 ${totalActual}분</span>
+      <span style="color: ${totalDiff > 0 ? '#FF3B30' : totalDiff < 0 ? '#34C759' : '#666'};">📊 ${diffStr}분</span>
     </div>
     <div class="task-list">
   `;
@@ -1035,6 +1069,34 @@ function renderTaskView() {
 
   const allTasks = [...sortByPriority(incompleteTasks), ...sortByPriority(completedTasks)];
 
+  // 시간 통계 계산
+  let totalTarget = 0;
+  let totalActual = 0;
+  allTasks.forEach(task => {
+    const targetTime = task.properties?.['목표 시간']?.number || 0;
+    totalTarget += targetTime;
+
+    const end = task.properties?.['끝']?.rich_text?.[0]?.plain_text || '';
+    if (end) {
+      const actualProp = task.properties?.['실제 시간'];
+      if (actualProp?.type === 'formula') {
+        if (actualProp.formula?.type === 'number') {
+          totalActual += actualProp.formula.number || 0;
+        } else if (actualProp.formula?.type === 'string') {
+          const str = actualProp.formula.string || '';
+          const hourMatch = str.match(/(\d+)시간/);
+          const minMatch = str.match(/(\d+)분/);
+          const hours = hourMatch ? parseInt(hourMatch[1]) : 0;
+          const mins = minMatch ? parseInt(minMatch[1]) : 0;
+          totalActual += hours * 60 + mins;
+        }
+      }
+    }
+  });
+
+  const totalDiff = totalActual - totalTarget;
+  const diffStr = totalDiff === 0 ? '±0' : (totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`);
+
   const content = document.getElementById('content');
   const dateLabel = formatDateLabelShort(targetDateStr);
   const dDayStr = getDDayString();
@@ -1047,6 +1109,11 @@ function renderTaskView() {
         <button onclick="toggleDDay()" style="font-size: 11px; padding: 2px 6px; background: ${dDayDate ? '#007AFF' : '#ccc'}; color: white; border: none; border-radius: 4px; cursor: pointer;">${dDayStr || 'D-Day'}</button>
       </div>
       <button onclick="changeDate(1)" style="font-size: 16px; padding: 4px 12px; color: #999;">▶</button>
+    </div>
+    <div style="display: flex; gap: 8px; font-size: 11px; color: #86868b; margin-bottom: 12px; justify-content: center;">
+      <span>⏱ 목표 ${totalTarget}분</span>
+      <span>⏳ 실제 ${totalActual}분</span>
+      <span style="color: ${totalDiff > 0 ? '#FF3B30' : totalDiff < 0 ? '#34C759' : '#666'};">📊 ${diffStr}분</span>
     </div>
     <button onclick="addNewTask()" style="width: 100%; margin-bottom: 12px; padding: 8px; background: #999; color: white; border-radius: 8px; cursor: pointer; border: none; font-size: 13px;">+ 할일 추가</button>
     <div class="task-list" id="task-sortable">
@@ -1602,7 +1669,7 @@ function renderCalendarView() {
     html += `
       <div style="margin-bottom: 20px;">
         <div style="display: flex; align-items: center; margin-bottom: 8px;">
-          <h4 style="${dateStyle}">${dateLabel}</h4>
+          <h4 style="${dateStyle} cursor: pointer;" onclick="toggleCalendarView('${dateStr}')" title="플래너로 이동">${dateLabel}</h4>
           ${items.length > 0 ? `<button onclick="saveToPlanner('${dateStr}')" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer; margin-left: 4px;" title="플래너에 저장">💾</button>` : ''}
         </div>
         <div class="calendar-date-group" data-date="${dateStr}">
