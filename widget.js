@@ -61,34 +61,52 @@ window.toggleDDaySelector = async function() {
     return;
   }
 
+  // 날짜순 정렬
+  ddayItems.sort((a, b) => {
+    const dateA = new Date(a.properties?.['날짜']?.date?.start);
+    const dateB = new Date(b.properties?.['날짜']?.date?.start);
+    return dateA - dateB;
+  });
+
   let html = `
-    <div style="padding: 20px;">
-      <h3 style="margin-bottom: 12px;">D-Day 선택</h3>
-      <div style="display: flex; flex-direction: column; gap: 8px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="margin: 0; font-size: 14px; font-weight: 600;">D-Day 선택</h3>
+      <button onclick="renderData()" style="font-size: 12px; padding: 4px 8px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer;">닫기</button>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
   `;
 
   ddayItems.forEach(item => {
     const title = item.properties?.['제목']?.title?.[0]?.plain_text || '제목 없음';
-    const date = item.properties?.['날짜']?.date?.start || '';
-    const isSelected = dDayDate === date;
+    const dateStr = item.properties?.['날짜']?.date?.start || '';
+    const isSelected = dDayDate === dateStr;
+
+    // D-Day 계산
+    const itemDate = new Date(dateStr);
+    itemDate.setHours(0, 0, 0, 0);
+    const diffTime = itemDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    let dDayText = '';
+    if (diffDays === 0) {
+      dDayText = 'D-Day';
+    } else if (diffDays > 0) {
+      dDayText = `D-${diffDays}`;
+    }
 
     html += `
-      <button onclick="selectDDay('${date}', '${title.replace(/'/g, "\\'")}', '${item.id}')"
+      <button onclick="selectDDay('${dateStr}', '${title.replace(/'/g, "\\'")}', '${item.id}')"
         style="padding: 12px; background: ${isSelected ? '#007AFF' : '#f5f5f7'}; color: ${isSelected ? 'white' : '#333'};
-        border: 1px solid ${isSelected ? '#007AFF' : '#e5e5e7'}; border-radius: 8px; cursor: pointer; text-align: left; font-size: 13px;">
-        <div style="font-weight: 500;">${title}</div>
-        <div style="font-size: 11px; opacity: 0.8; margin-top: 4px;">${date}</div>
+        border: 1px solid ${isSelected ? '#007AFF' : '#e5e5e7'}; border-radius: 8px; cursor: pointer; text-align: left; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-weight: 500;">${title}</span>
+        <span style="font-weight: 600; font-size: 14px; opacity: ${isSelected ? '1' : '0.7'};">${dDayText}</span>
       </button>
     `;
   });
 
   html += `
-      </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px;">
-        <button onclick="renderData()" style="padding: 8px; background: #999; color: white; border: none; border-radius: 4px; cursor: pointer;">닫기</button>
-        <button onclick="clearDDay()" style="padding: 8px; background: #FF3B30; color: white; border: none; border-radius: 4px; cursor: pointer;">D-Day 제거</button>
-      </div>
     </div>
+    <button onclick="clearDDay()" style="width: 100%; margin-top: 16px; padding: 8px; background: #FF3B30; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px;">D-Day 제거</button>
   `;
 
   content.innerHTML = html;
@@ -111,6 +129,46 @@ window.clearDDay = function() {
   updateDDayButton();
   renderData();
 };
+
+function autoSelectClosestDDay() {
+  if (!ddayData || !ddayData.results) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // '디데이 표시' 체크된 항목 중 미래 날짜만 필터링
+  const futureDDays = ddayData.results.filter(item => {
+    if (item.properties?.['디데이 표시']?.checkbox !== true) return false;
+
+    const dateStr = item.properties?.['날짜']?.date?.start;
+    if (!dateStr) return false;
+
+    const itemDate = new Date(dateStr);
+    itemDate.setHours(0, 0, 0, 0);
+
+    return itemDate >= today;
+  });
+
+  if (futureDDays.length === 0) return;
+
+  // 날짜순 정렬 (가장 가까운 날짜 찾기)
+  futureDDays.sort((a, b) => {
+    const dateA = new Date(a.properties?.['날짜']?.date?.start);
+    const dateB = new Date(b.properties?.['날짜']?.date?.start);
+    return dateA - dateB;
+  });
+
+  // 가장 가까운 D-Day 선택
+  const closestDDay = futureDDays[0];
+  const title = closestDDay.properties?.['제목']?.title?.[0]?.plain_text || '제목 없음';
+  const date = closestDDay.properties?.['날짜']?.date?.start || '';
+
+  dDayDate = date;
+  dDayTitle = title;
+  localStorage.setItem('dDayDate', date);
+  localStorage.setItem('dDayTitle', title);
+  updateDDayButton();
+}
 
 let plannerCalendarViewMode = false;
 
@@ -920,7 +978,9 @@ window.updateRating = async function(taskId, value) {
   }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await fetchDDayData();
+  autoSelectClosestDDay();
   fetchData();
   setupEventListeners();
   setInterval(fetchData, 300000);
@@ -1274,7 +1334,7 @@ function renderTimelineView() {
           
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="font-size: 11px; color: #86868b;">
-              목표 ${formatMinutesToTime(targetTime)} / 실제 ${formatMinutesToTime(actualTime)}${end ? ` <span style="color: ${actualTime - targetTime > 0 ? '#FF3B30' : actualTime - targetTime < 0 ? '#34C759' : '#666'};">(${actualTime - targetTime > 0 ? '+' : ''}${formatMinutesToTime(Math.abs(actualTime - targetTime))})</span>` : ''}
+              목표 ${formatMinutesToTime(targetTime)} / 실제 ${formatMinutesToTime(actualTime)}${end ? ` (${actualTime - targetTime > 0 ? '+' : ''}${formatMinutesToTime(Math.abs(actualTime - targetTime))})` : ''}
             </div>
             <span style="cursor: pointer; font-size: 16px; position: relative; display: inline-block; width: 20px; height: 20px; flex-shrink: 0;">
               →
