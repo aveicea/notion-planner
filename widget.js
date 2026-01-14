@@ -149,6 +149,19 @@ function autoSelectClosestDDay() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  console.log('=== D-Day 디버그 ===');
+  console.log('전체 항목 수:', ddayData.results.length);
+
+  // 체크박스 체크된 항목 확인
+  const checkedItems = ddayData.results.filter(item => item.properties?.['디데이 표시']?.checkbox === true);
+  console.log('디데이 표시 체크된 항목 수:', checkedItems.length);
+
+  checkedItems.forEach((item, i) => {
+    const title = item.properties?.['이름']?.title?.[0]?.plain_text;
+    const dateStr = item.properties?.['date']?.date?.start;
+    console.log(`  ${i+1}. ${title} - ${dateStr}`);
+  });
+
   // '디데이 표시' 체크된 항목 중 미래 날짜만 필터링
   const futureDDays = ddayData.results.filter(item => {
     const hasCheckbox = item.properties?.['디데이 표시']?.checkbox === true;
@@ -162,6 +175,8 @@ function autoSelectClosestDDay() {
 
     return itemDate >= today;
   });
+
+  console.log('미래 D-Day 항목 수:', futureDDays.length);
 
   if (futureDDays.length === 0) return;
 
