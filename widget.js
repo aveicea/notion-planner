@@ -25,24 +25,36 @@ window.goToday = function() {
   renderData();
 };
 
-window.toggleDDay = function() {
-  // 항상 날짜 입력 받기
-  const currentDDay = dDayDate ? `현재: ${dDayDate}` : '';
-  const message = currentDDay ? `D-Day 날짜를 입력하세요 (${currentDDay})` : 'D-Day 날짜를 입력하세요 (예: 2026-03-15)';
-  const dateInput = prompt(message, dDayDate || '');
+window.setupDDayPicker = function() {
+  const picker = document.getElementById('dday-date-picker');
+  const button = document.getElementById('dday-button');
+  if (!picker || !button) return;
 
-  if (dateInput) {
-    dDayDate = dateInput;
-    localStorage.setItem('dDayDate', dateInput);
-    updateDDayButton();
-    if (currentData) renderData();
-  } else if (dateInput === '') {
-    // 빈 문자열로 입력하면 D-Day 제거
+  // 현재 D-Day 값 설정
+  if (dDayDate) {
+    picker.value = dDayDate;
+  }
+
+  // 날짜 선택 시
+  picker.addEventListener('change', (e) => {
+    const selectedDate = e.target.value;
+    if (selectedDate) {
+      dDayDate = selectedDate;
+      localStorage.setItem('dDayDate', selectedDate);
+      updateDDayButton();
+      if (currentData) renderData();
+    }
+  });
+
+  // 버튼 더블클릭 시 D-Day 제거
+  button.addEventListener('dblclick', (e) => {
+    e.preventDefault();
     dDayDate = null;
     localStorage.removeItem('dDayDate');
+    picker.value = '';
     updateDDayButton();
     if (currentData) renderData();
-  }
+  });
 };
 
 function getDDayString() {
@@ -707,8 +719,9 @@ window.updateRating = async function(taskId, value) {
 document.addEventListener('DOMContentLoaded', () => {
   fetchData();
   setupEventListeners();
+  setupDDayPicker();
   setInterval(fetchData, 300000);
-  
+
   setInterval(() => {
     console.log('keepalive');
   }, 60000);
