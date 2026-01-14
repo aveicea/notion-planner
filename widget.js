@@ -129,39 +129,25 @@ window.duplicateTask = async function(taskId) {
     const bookRelation = task.properties?.['책']?.relation?.[0];
     const targetTime = task.properties?.['목표 시간']?.number;
     const dateStart = task.properties?.['날짜']?.date?.start;
-    const start = task.properties?.['시작']?.rich_text?.[0]?.plain_text;
-    const end = task.properties?.['끝']?.rich_text?.[0]?.plain_text;
-    const rating = task.properties?.['(੭•̀ᴗ•̀)੭']?.select?.name;
-    
+    // 시작/끝 시간은 복제하지 않음
+
     const properties = {
       '범위': {
         title: [{ text: { content: newTitle } }]
       },
       '완료': { checkbox: false }
     };
-    
+
     if (bookRelation) {
       properties['책'] = { relation: [{ id: bookRelation.id }] };
     }
-    
+
     if (targetTime) {
       properties['목표 시간'] = { number: targetTime };
     }
-    
+
     if (dateStart) {
       properties['날짜'] = { date: { start: dateStart } };
-    }
-    
-    if (start) {
-      properties['시작'] = { rich_text: [{ type: 'text', text: { content: start } }] };
-    }
-    
-    if (end) {
-      properties['끝'] = { rich_text: [{ type: 'text', text: { content: end } }] };
-    }
-    
-    if (rating) {
-      properties['(੭•̀ᴗ•̀)੭'] = { select: { name: rating } };
     }
     
     // 우선순위 복사
@@ -234,11 +220,13 @@ window.confirmEditTask = async function(taskId) {
     }
     
     if (startInput.value) {
-      properties['시작'] = { rich_text: [{ type: 'text', text: { content: startInput.value } }] };
+      const formattedStart = formatTimeInput(startInput.value);
+      properties['시작'] = { rich_text: [{ type: 'text', text: { content: formattedStart } }] };
     }
-    
+
     if (endInput.value) {
-      properties['끝'] = { rich_text: [{ type: 'text', text: { content: endInput.value } }] };
+      const formattedEnd = formatTimeInput(endInput.value);
+      properties['끝'] = { rich_text: [{ type: 'text', text: { content: formattedEnd } }] };
     }
     
     if (ratingSelect.value) {
@@ -432,16 +420,50 @@ window.toggleComplete = async function(taskId, completed) {
   }
 };
 
-window.updateTime = async function(taskId, field, value) {
-  if (!value.trim()) return;
-  
+window.formatTimeInput = function(value) {
+  // 빈 값이면 그대로 반환
+  if (!value || !value.trim()) return value;
+
+  // 이미 콜론이 있으면 그대로 반환
+  if (value.includes(':')) return value;
+
+  // 숫자만 추출
+  const numbers = value.replace(/\D/g, '');
+
+  // 숫자가 없으면 빈 문자열
+  if (!numbers) return '';
+
+  // 길이에 따라 포맷팅
+  if (numbers.length <= 2) {
+    // 1자리나 2자리: 시간만 (예: 9 -> 09:00, 11 -> 11:00)
+    return numbers.padStart(2, '0') + ':00';
+  } else if (numbers.length === 3) {
+    // 3자리: 첫 자리는 시간, 나머지는 분 (예: 930 -> 09:30)
+    return '0' + numbers[0] + ':' + numbers.slice(1);
+  } else {
+    // 4자리 이상: 앞 2자리 시간, 다음 2자리 분 (예: 1130 -> 11:30)
+    return numbers.slice(0, 2) + ':' + numbers.slice(2, 4);
+  }
+};
+
+window.updateTime = async function(taskId, field, value, inputElement) {
+  // 시간 포맷 자동 변환
+  const formattedValue = formatTimeInput(value);
+
+  // 입력 필드 업데이트
+  if (inputElement) {
+    inputElement.value = formattedValue;
+  }
+
+  if (!formattedValue.trim()) return;
+
   const loading = document.getElementById('loading');
   loading.textContent = '⏳';
-  
+
   try {
     await updateNotionPage(taskId, {
       [field]: {
-        rich_text: [{ type: 'text', text: { content: value } }]
+        rich_text: [{ type: 'text', text: { content: formattedValue } }]
       }
     });
     setTimeout(() => fetchData(), 500);
@@ -867,12 +889,12 @@ function renderTimelineView() {
           </div>
           
           <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 8px;">
-            <input type="text" value="${start}" placeholder="시작" 
-              onblur="updateTime('${task.id}', '시작', this.value)"
+            <input type="text" value="${start}" placeholder="시작"
+              onblur="updateTime('${task.id}', '시작', this.value, this)"
               style="width: 50px; padding: 4px; border: 1px solid #e5e5e7; border-radius: 4px; text-align: center; font-size: 11px;">
             <span style="font-size: 11px; color: #86868b;">-</span>
-            <input type="text" value="${end}" placeholder="끝" 
-              onblur="updateTime('${task.id}', '끝', this.value)"
+            <input type="text" value="${end}" placeholder="끝"
+              onblur="updateTime('${task.id}', '끝', this.value, this)"
               style="width: 50px; padding: 4px; border: 1px solid #e5e5e7; border-radius: 4px; text-align: center; font-size: 11px;">
             
             <select onchange="updateRating('${task.id}', this.value)" 
