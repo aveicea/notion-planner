@@ -1487,9 +1487,9 @@ function renderCalendarView() {
   let html = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <h3 class="section-title" style="margin: 0;">📅 달력</h3>
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <button onclick="undoCalendarSync()" style="font-size: 16px; padding: 4px; background: none; border: none; cursor: pointer;" title="되돌리기">↩️</button>
-        <button onclick="syncPlannerToCalendar()" style="font-size: 16px; padding: 4px; background: none; border: none; cursor: pointer;" title="플래너 동기화">🔄</button>
+      <div style="display: flex; gap: 4px; align-items: center;">
+        <button onclick="undoCalendarSync()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="되돌리기">↩️</button>
+        <button onclick="syncPlannerToCalendar()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="플래너 동기화">🔄</button>
         <button onclick="toggleCalendarView()" style="font-size: 12px; padding: 4px 8px;">닫기</button>
       </div>
     </div>
@@ -1502,9 +1502,9 @@ function renderCalendarView() {
 
     html += `
       <div style="margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <h4 style="font-size: 13px; font-weight: 600; color: #666; margin: 0;">${dateLabel}</h4>
-          ${items.length > 0 ? `<button onclick="saveToPlanner('${dateStr}')" style="font-size: 16px; padding: 4px; background: none; border: none; cursor: pointer;" title="플래너에 저장">💾</button>` : ''}
+        <div style="display: flex; align-items: center; margin-bottom: 8px; gap: 8px;">
+          <h4 style="font-size: 13px; font-weight: 600; color: #666; margin: 0; flex: 1;">${dateLabel}</h4>
+          ${items.length > 0 ? `<button onclick="saveToPlanner('${dateStr}')" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="플래너에 저장">💾</button>` : ''}
         </div>
         <div class="calendar-date-group" data-date="${dateStr}">
     `;
