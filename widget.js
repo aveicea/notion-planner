@@ -9,6 +9,8 @@ let calendarData = null;
 let bookNames = {};
 let currentDate = new Date();
 let calendarViewMode = false;
+let calendarStartDate = new Date();
+let calendarWeeksToShow = 2;
 
 // 전역 함수 등록
 window.changeDate = function(days) {
@@ -24,6 +26,8 @@ window.goToday = function() {
 window.toggleCalendarView = async function() {
   calendarViewMode = !calendarViewMode;
   if (calendarViewMode) {
+    calendarStartDate = new Date(); // 오늘로 초기화
+    calendarStartDate.setHours(0, 0, 0, 0); // 시간 초기화
     await fetchCalendarData();
     renderCalendarView();
   } else {
@@ -1085,7 +1089,9 @@ async function updateNotionPage(pageId, properties) {
 
 function formatDateLabel(dateString) {
   const date = new Date(dateString);
-  return `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  const days = ['일', '월', '화', '수', '목', '금', '토'];
+  const dayOfWeek = days[date.getDay()];
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 (${dayOfWeek})`;
 }
 
 function formatDateShort(dateString) {
@@ -1132,11 +1138,45 @@ async function fetchCalendarData() {
   }
 }
 
-window.updateCalendarItemDate = function(itemId, newDate) {
+window.updateCalendarItemDate = async function(itemId, newDate) {
   const item = calendarData.results.find(t => t.id === itemId);
   if (item && item.properties?.['날짜']) {
     item.properties['날짜'].date = { start: newDate };
+
+    // 노션에 실제로 날짜 업데이트
+    try {
+      const notionUrl = `https://api.notion.com/v1/pages/${itemId}`;
+      const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${NOTION_API_KEY}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          properties: {
+            '날짜': { date: { start: newDate } }
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('날짜 업데이트 실패');
+      }
+    } catch (error) {
+      console.error('Error updating date:', error);
+      alert('노션에 날짜를 저장하는데 실패했습니다: ' + error.message);
+    }
   }
+};
+
+window.loadMoreCalendar = function(direction) {
+  if (direction === 'prev') {
+    calendarStartDate.setDate(calendarStartDate.getDate() - 14);
+  } else {
+    calendarStartDate.setDate(calendarStartDate.getDate() + 14);
+  }
+  renderCalendarView();
 };
 
 window.saveToPlanner = async function(dateStr) {
@@ -1213,13 +1253,26 @@ function renderCalendarView() {
     }
   });
 
-  // 날짜 정렬 (최신순)
-  const sortedDates = Object.keys(groupedByDate).sort().reverse();
+  // 날짜 필터링: 시작일부터 2주간
+  const endDate = new Date(calendarStartDate);
+  endDate.setDate(endDate.getDate() + (calendarWeeksToShow * 7));
+
+  const filteredDates = Object.keys(groupedByDate).filter(dateStr => {
+    const date = new Date(dateStr);
+    return date >= calendarStartDate && date < endDate;
+  });
+
+  // 날짜 정렬 (오름차순)
+  const sortedDates = filteredDates.sort();
 
   let html = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <h3 class="section-title" style="margin: 0;">📅 달력</h3>
       <button onclick="toggleCalendarView()" style="font-size: 12px; padding: 4px 8px;">닫기</button>
+    </div>
+    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+      <button onclick="loadMoreCalendar('prev')" style="flex: 1; background: #e5e5e7; color: #333; border: none; border-radius: 4px; padding: 6px; font-size: 11px; cursor: pointer;">◀ 이전 2주</button>
+      <button onclick="loadMoreCalendar('next')" style="flex: 1; background: #e5e5e7; color: #333; border: none; border-radius: 4px; padding: 6px; font-size: 11px; cursor: pointer;">다음 2주 ▶</button>
     </div>
   `;
 
@@ -1231,7 +1284,7 @@ function renderCalendarView() {
       <div style="margin-bottom: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
           <h4 style="font-size: 13px; font-weight: 600; color: #666; margin: 0;">${dateLabel}</h4>
-          <button onclick="saveToPlanner('${dateStr}')" style="background: #007AFF; color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 11px; cursor: pointer;">💾 저장</button>
+          <button onclick="saveToPlanner('${dateStr}')" style="background: #999; color: white; border: none; border-radius: 4px; padding: 4px 12px; font-size: 11px; cursor: pointer;">💾 저장</button>
         </div>
         <div class="calendar-date-group" data-date="${dateStr}">
     `;
