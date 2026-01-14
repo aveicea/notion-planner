@@ -142,16 +142,24 @@ window.clearDDay = function() {
 };
 
 function autoSelectClosestDDay() {
-  if (!ddayData || !ddayData.results) return;
+  if (!ddayData || !ddayData.results) {
+    console.log('No D-Day data available');
+    return;
+  }
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  console.log('D-Day data results:', ddayData.results.length);
+
   // '디데이 표시' 체크된 항목 중 미래 날짜만 필터링
   const futureDDays = ddayData.results.filter(item => {
-    if (item.properties?.['디데이 표시']?.checkbox !== true) return false;
-
+    const hasCheckbox = item.properties?.['디데이 표시']?.checkbox === true;
     const dateStr = item.properties?.['날짜']?.date?.start;
+
+    console.log('Item:', item.properties?.['제목']?.title?.[0]?.plain_text, 'Checkbox:', hasCheckbox, 'Date:', dateStr);
+
+    if (!hasCheckbox) return false;
     if (!dateStr) return false;
 
     const itemDate = new Date(dateStr);
@@ -159,6 +167,8 @@ function autoSelectClosestDDay() {
 
     return itemDate >= today;
   });
+
+  console.log('Future D-Days found:', futureDDays.length);
 
   if (futureDDays.length === 0) return;
 
@@ -173,6 +183,8 @@ function autoSelectClosestDDay() {
   const closestDDay = futureDDays[0];
   const title = closestDDay.properties?.['제목']?.title?.[0]?.plain_text || '제목 없음';
   const date = closestDDay.properties?.['날짜']?.date?.start || '';
+
+  console.log('Selected D-Day:', title, date);
 
   dDayDate = date;
   dDayTitle = title;
