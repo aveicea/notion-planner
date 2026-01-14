@@ -34,7 +34,14 @@ window.toggleDDay = function() {
   if (dateInput) {
     dDayDate = dateInput;
     localStorage.setItem('dDayDate', dateInput);
-    renderData();
+    updateDDayButton();
+    if (currentData) renderData();
+  } else if (dateInput === '') {
+    // 빈 문자열로 입력하면 D-Day 제거
+    dDayDate = null;
+    localStorage.removeItem('dDayDate');
+    updateDDayButton();
+    if (currentData) renderData();
   }
 };
 
@@ -867,10 +874,22 @@ function getCalendarItemTitle(item) {
 function renderData() {
   if (!currentData || !currentData.results) return;
 
+  // D-Day 버튼 업데이트
+  updateDDayButton();
+
   if (viewMode === 'timeline') {
     renderTimelineView();
   } else {
     renderTaskView();
+  }
+}
+
+function updateDDayButton() {
+  const ddayButton = document.getElementById('dday-button');
+  if (ddayButton) {
+    const dDayStr = getDDayString();
+    ddayButton.textContent = dDayStr || 'D-Day';
+    ddayButton.style.background = dDayDate ? '#999' : '#999';
   }
 }
 
@@ -1099,15 +1118,11 @@ function renderTaskView() {
 
   const content = document.getElementById('content');
   const dateLabel = formatDateLabelShort(targetDateStr);
-  const dDayStr = getDDayString();
 
   let html = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <button onclick="changeDate(-1)" style="font-size: 16px; padding: 4px 12px; color: #999;">◀</button>
-      <div style="display: flex; align-items: center; gap: 4px;">
-        <h3 class="section-title" style="margin: 0; cursor: pointer;" onclick="goToday()">${dateLabel}</h3>
-        <button onclick="toggleDDay()" style="font-size: 11px; padding: 2px 6px; background: ${dDayDate ? '#007AFF' : '#ccc'}; color: white; border: none; border-radius: 4px; cursor: pointer;">${dDayStr || 'D-Day'}</button>
-      </div>
+      <h3 class="section-title" style="margin: 0; cursor: pointer;" onclick="goToday()">${dateLabel}</h3>
       <button onclick="changeDate(1)" style="font-size: 16px; padding: 4px 12px; color: #999;">▶</button>
     </div>
     <div style="font-size: 11px; color: #86868b; margin-bottom: 12px; text-align: center;">
