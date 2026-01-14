@@ -177,7 +177,7 @@ window.duplicateTask = async function(taskId) {
     
     setTimeout(() => fetchData(), 500);
   } catch (error) {
-    alert('복제 실패: ' + error.message);
+    console.error('복제 실패:', error);
     loading.textContent = '';
   }
 };
@@ -194,7 +194,6 @@ window.confirmEditTask = async function(taskId) {
   const title = titleInput.value.trim();
 
   if (!title) {
-    alert('제목을 입력해주세요!');
     return;
   }
 
@@ -246,15 +245,13 @@ window.confirmEditTask = async function(taskId) {
       await updateNotionPage(taskId, properties);
       setTimeout(() => fetchData(), 500);
     } catch (error) {
-      alert('수정 실패: ' + error.message);
+      console.error('수정 실패:', error);
       loading.textContent = '';
     }
   })();
 };
 
 window.deleteTask = async function(taskId) {
-  if (!confirm('정말 삭제하시겠습니까?')) return;
-
   const loading = document.getElementById('loading');
   loading.textContent = '⏳';
 
@@ -281,7 +278,7 @@ window.deleteTask = async function(taskId) {
 
       setTimeout(() => fetchData(), 500);
     } catch (error) {
-      alert('삭제 실패: ' + error.message);
+      console.error('삭제 실패:', error);
       loading.textContent = '';
     }
   })();
@@ -336,9 +333,8 @@ window.confirmAddTask = async function() {
   const timeInput = document.getElementById('new-task-time');
   
   const title = titleInput.value.trim();
-  
+
   if (!title) {
-    alert('제목을 입력해주세요!');
     return;
   }
   
@@ -410,7 +406,6 @@ window.confirmAddTask = async function() {
     setTimeout(() => fetchData(), 500);
   } catch (error) {
     console.error('할일 추가 오류:', error);
-    alert('할일 추가 실패: ' + error.message);
   } finally {
     loading.textContent = '';
   }
@@ -430,7 +425,7 @@ window.toggleComplete = async function(taskId, completed) {
     });
     setTimeout(() => fetchData(), 500);
   } catch (error) {
-    alert('업데이트 실패: ' + error.message);
+    console.error('업데이트 실패:', error);
     loading.textContent = '';
   }
 };
@@ -483,7 +478,7 @@ window.updateTime = async function(taskId, field, value, inputElement) {
     });
     setTimeout(() => fetchData(), 500);
   } catch (error) {
-    alert('시간 업데이트 실패: ' + error.message);
+    console.error('시간 업데이트 실패:', error);
     loading.textContent = '';
   }
 };
@@ -563,10 +558,10 @@ window.updateDate = async function(taskId, newDate) {
     });
 
     if (!response.ok) throw new Error('복제 실패');
-    
+
     setTimeout(() => fetchData(), 500);
   } catch (error) {
-    alert('날짜 변경 실패: ' + error.message);
+    console.error('날짜 변경 실패:', error);
     loading.textContent = '';
   }
 };
@@ -644,10 +639,10 @@ window.updateDateInTask = async function(taskId, newDate) {
     });
 
     if (!response.ok) throw new Error('복제 실패');
-    
+
     setTimeout(() => fetchData(), 500);
   } catch (error) {
-    alert('날짜 변경 실패: ' + error.message);
+    console.error('날짜 변경 실패:', error);
     loading.textContent = '';
   }
 };
@@ -662,7 +657,7 @@ window.updateRating = async function(taskId, value) {
     });
     setTimeout(() => fetchData(), 500);
   } catch (error) {
-    alert('집중도 업데이트 실패: ' + error.message);
+    console.error('집중도 업데이트 실패:', error);
     loading.textContent = '';
   }
 };
@@ -1205,7 +1200,6 @@ async function fetchCalendarData() {
     await fetchBookNames();
   } catch (error) {
     console.error('Calendar fetch error:', error);
-    alert('달력 데이터를 불러오는데 실패했습니다: ' + error.message);
   } finally {
     loading.textContent = '';
   }
@@ -1238,7 +1232,6 @@ window.updateCalendarItemDate = async function(itemId, newDate) {
       }
     } catch (error) {
       console.error('Error updating date:', error);
-      alert('노션에 날짜를 저장하는데 실패했습니다: ' + error.message);
     }
   }
 };
@@ -1304,15 +1297,12 @@ window.saveToPlanner = async function(dateStr) {
     await fetchData();
   } catch (error) {
     console.error('Save error:', error);
-    alert('플래너에 저장하는데 실패했습니다: ' + error.message);
   } finally {
     loading.textContent = '';
   }
 };
 
 window.undoCalendarSync = async function() {
-  if (!confirm('마지막 동기화를 되돌리시겠습니까?')) return;
-
   // 되돌리기 로직은 복잡하므로 일단 새로고침만
   await fetchCalendarData();
   renderCalendarView();
@@ -1463,7 +1453,6 @@ window.syncPlannerToCalendar = async function() {
     renderCalendarView();
   } catch (error) {
     console.error('Sync error:', error);
-    alert('동기화 실패: ' + error.message);
   } finally {
     loading.textContent = '';
   }
@@ -1498,9 +1487,9 @@ function renderCalendarView() {
   let html = `
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
       <h3 class="section-title" style="margin: 0;">📅 달력</h3>
-      <div style="display: flex; gap: 8px; align-items: center;">
-        <button onclick="undoCalendarSync()" style="font-size: 16px; padding: 4px; background: none; border: none; cursor: pointer;" title="되돌리기">↩️</button>
-        <button onclick="syncPlannerToCalendar()" style="font-size: 16px; padding: 4px; background: none; border: none; cursor: pointer;" title="플래너 동기화">🔄</button>
+      <div style="display: flex; gap: 4px; align-items: center;">
+        <button onclick="undoCalendarSync()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="되돌리기">↩️</button>
+        <button onclick="syncPlannerToCalendar()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="플래너 동기화">🔄</button>
         <button onclick="toggleCalendarView()" style="font-size: 12px; padding: 4px 8px;">닫기</button>
       </div>
     </div>
@@ -1513,9 +1502,9 @@ function renderCalendarView() {
 
     html += `
       <div style="margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-          <h4 style="font-size: 13px; font-weight: 600; color: #666; margin: 0;">${dateLabel}</h4>
-          ${items.length > 0 ? `<button onclick="saveToPlanner('${dateStr}')" style="font-size: 16px; padding: 4px; background: none; border: none; cursor: pointer;" title="플래너에 저장">💾</button>` : ''}
+        <div style="display: flex; align-items: center; margin-bottom: 8px; gap: 8px;">
+          <h4 style="font-size: 13px; font-weight: 600; color: #666; margin: 0; flex: 1;">${dateLabel}</h4>
+          ${items.length > 0 ? `<button onclick="saveToPlanner('${dateStr}')" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="플래너에 저장">💾</button>` : ''}
         </div>
         <div class="calendar-date-group" data-date="${dateStr}">
     `;
