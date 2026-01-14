@@ -1,5 +1,6 @@
 const NOTION_API_KEY = "secret_pNLmc1M6IlbkoiwoUrKnE2mzJlJGYZ61eppTt5tRZuR";
 const DATABASE_ID = "468bf987e6cd4372abf96a8f30f165b1";
+const CORS_PROXY = "https://corsproxy.io/?";
 
 let viewMode = 'timeline';
 let currentData = null;
@@ -152,7 +153,8 @@ window.duplicateTask = async function(taskId) {
       properties['우선순위'] = { select: { name: priority } };
     }
     
-    const response = await fetch('https://api.notion.com/v1/pages', {
+    const notionUrl = 'https://api.notion.com/v1/pages';
+    const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -164,7 +166,7 @@ window.duplicateTask = async function(taskId) {
         properties: properties
       })
     });
-    
+
     if (!response.ok) throw new Error('복제 실패');
     
     setTimeout(() => fetchData(), 500);
@@ -243,7 +245,8 @@ window.deleteTask = async function(taskId) {
   loading.textContent = '⏳';
   
   try {
-    const response = await fetch(`https://api.notion.com/v1/pages/${taskId}`, {
+    const notionUrl = `https://api.notion.com/v1/pages/${taskId}`;
+    const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
       method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -254,9 +257,9 @@ window.deleteTask = async function(taskId) {
         archived: true
       })
     });
-    
+
     if (!response.ok) throw new Error('삭제 실패');
-    
+
     setTimeout(() => fetchData(), 500);
   } catch (error) {
     alert('삭제 실패: ' + error.message);
@@ -363,7 +366,8 @@ window.confirmAddTask = async function() {
       };
     }
     
-    const response = await fetch('https://api.notion.com/v1/pages', {
+    const notionUrl = 'https://api.notion.com/v1/pages';
+    const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -375,10 +379,10 @@ window.confirmAddTask = async function() {
         properties: properties
       })
     });
-    
+
     const result = await response.json();
     console.log('추가 결과:', result);
-    
+
     if (!response.ok) {
       throw new Error(result.message || '추가 실패');
     }
@@ -490,7 +494,8 @@ window.updateDate = async function(taskId, newDate) {
       properties['우선순위'] = { select: { name: priority } };
     }
     
-    const response = await fetch('https://api.notion.com/v1/pages', {
+    const notionUrl = 'https://api.notion.com/v1/pages';
+    const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -502,7 +507,7 @@ window.updateDate = async function(taskId, newDate) {
         properties: properties
       })
     });
-    
+
     if (!response.ok) throw new Error('복제 실패');
     
     setTimeout(() => fetchData(), 500);
@@ -570,7 +575,8 @@ window.updateDateInTask = async function(taskId, newDate) {
       properties['우선순위'] = { select: { name: priority } };
     }
     
-    const response = await fetch('https://api.notion.com/v1/pages', {
+    const notionUrl = 'https://api.notion.com/v1/pages';
+    const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -582,7 +588,7 @@ window.updateDateInTask = async function(taskId, newDate) {
         properties: properties
       })
     });
-    
+
     if (!response.ok) throw new Error('복제 실패');
     
     setTimeout(() => fetchData(), 500);
@@ -631,7 +637,8 @@ async function fetchData(retryCount = 0) {
   loading.textContent = '⏳';
 
   try {
-    const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+    const notionUrl = `https://api.notion.com/v1/databases/${DATABASE_ID}/query`;
+    const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -698,7 +705,8 @@ async function fetchBookNames() {
   for (const bookId of bookIds) {
     if (!bookNames[bookId]) {
       try {
-        const response = await fetch(`https://api.notion.com/v1/pages/${bookId}`, {
+        const notionUrl = `https://api.notion.com/v1/pages/${bookId}`;
+        const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
           headers: {
             'Authorization': `Bearer ${NOTION_API_KEY}`,
             'Notion-Version': '2022-06-28'
@@ -1043,7 +1051,8 @@ async function updateTaskOrder() {
 }
 
 async function updateNotionPage(pageId, properties) {
-  const response = await fetch(`https://api.notion.com/v1/pages/${pageId}`, {
+  const notionUrl = `https://api.notion.com/v1/pages/${pageId}`;
+  const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
     method: 'PATCH',
     headers: {
       'Authorization': `Bearer ${NOTION_API_KEY}`,

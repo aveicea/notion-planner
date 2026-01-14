@@ -98,9 +98,33 @@ https://handy0125.github.io/notion-planner
 
 ## 🔒 보안 주의
 
-**API Key가 코드에 노출되어 있습니다!**
-- 개인 사용만 권장
-- 공개 배포 시 백엔드 서버 사용 필요
+**⚠️ 중요: CORS 프록시 사용 중**
+
+현재 GitHub Pages에서 작동하도록 **CORS 프록시**(corsproxy.io)를 사용하고 있습니다.
+
+**보안 위험:**
+- API 키가 프록시 서버를 통과합니다
+- 제3자 서비스를 통해 모든 요청이 라우팅됩니다
+- **개인 사용만 권장합니다**
+
+**더 안전한 대안:**
+1. **Electron 앱 사용** (CORS 제한 없음, 가장 안전)
+   ```bash
+   npm install
+   npm start
+   ```
+
+2. **로컬 서버 사용** (Live Server, Python 등)
+   - API 키가 프록시를 거치지 않음
+
+3. **백엔드 서버 구축** (프로덕션용)
+   - Cloudflare Workers
+   - Vercel/Netlify Functions
+   - 자체 백엔드 서버
+
+**API Key 노출:**
+- API 키가 코드에 하드코딩되어 있습니다
+- 공개 배포 시 환경 변수 사용 필요
 
 ## 📦 Electron 앱 버전
 
@@ -136,6 +160,12 @@ npm start
 - 날짜 필터링
 
 ## 📝 업데이트 내역
+
+### v1.1.0 (2026-01-14)
+- 🔧 **CORS 문제 해결**: corsproxy.io를 통한 GitHub Pages 지원
+- 🔄 **재시도 로직 추가**: 네트워크 오류 시 자동 재시도 (3회, exponential backoff)
+- 📊 **상세 오류 메시지**: 각 오류 유형별 구체적인 안내
+- 📚 **README 업데이트**: 문제 해결 가이드 및 보안 주의사항 추가
 
 ### v1.0.0 (2026-01-14)
 - 초기 릴리즈
