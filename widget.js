@@ -11,6 +11,7 @@ let currentDate = new Date();
 let calendarViewMode = false;
 let calendarStartDate = new Date();
 let calendarEndDate = new Date();
+let lastSyncedItems = []; // 마지막 동기화로 생성된 항목 ID들
 
 // 전역 함수 등록
 window.changeDate = function(days) {
@@ -1303,9 +1304,40 @@ window.saveToPlanner = async function(dateStr) {
 };
 
 window.undoCalendarSync = async function() {
-  // 되돌리기 로직은 복잡하므로 일단 새로고침만
-  await fetchCalendarData();
-  renderCalendarView();
+  if (lastSyncedItems.length === 0) {
+    console.log('되돌릴 동기화 내역이 없습니다');
+    return;
+  }
+
+  const loading = document.getElementById('loading');
+  loading.textContent = '⏳';
+
+  try {
+    // 마지막 동기화로 생성된 항목들을 삭제
+    for (const itemId of lastSyncedItems) {
+      const notionUrl = `https://api.notion.com/v1/pages/${itemId}`;
+      await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${NOTION_API_KEY}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          archived: true
+        })
+      });
+    }
+
+    // 되돌리기 후 초기화
+    lastSyncedItems = [];
+    await fetchCalendarData();
+    renderCalendarView();
+  } catch (error) {
+    console.error('Undo error:', error);
+  } finally {
+    loading.textContent = '';
+  }
 };
 
 window.syncPlannerToCalendar = async function() {
@@ -1313,6 +1345,9 @@ window.syncPlannerToCalendar = async function() {
   loading.textContent = '⏳';
 
   try {
+    // 새 동기화 시작 시 이전 기록 초기화
+    lastSyncedItems = [];
+
     // 플래너의 모든 항목 가져오기
     const plannerItems = currentData.results;
 
@@ -1444,6 +1479,9 @@ window.syncPlannerToCalendar = async function() {
       });
 
       if (response.ok) {
+        const result = await response.json();
+        // 새로 생성된 항목 ID 저장
+        lastSyncedItems.push(result.id);
         syncCount++;
       }
     }
