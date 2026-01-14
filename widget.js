@@ -936,7 +936,8 @@ function renderTimelineView() {
   });
 
   const totalDiff = totalActual - totalTarget;
-  const diffStr = totalDiff === 0 ? '±0' : (totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`);
+  const diffSign = totalDiff === 0 ? '±' : (totalDiff > 0 ? '+' : '-');
+  const diffAbs = Math.abs(totalDiff);
 
   const content = document.getElementById('content');
   const dateLabel = formatDateLabelShort(targetDateStr);
@@ -947,10 +948,8 @@ function renderTimelineView() {
       <h3 class="section-title" style="margin: 0; cursor: pointer;" onclick="goToday()">${dateLabel} (${sortedTasks.length}개)</h3>
       <button onclick="changeDate(1)" style="font-size: 16px; padding: 4px 12px; color: #999;">▶</button>
     </div>
-    <div style="display: flex; gap: 8px; font-size: 11px; color: #86868b; margin-bottom: 12px; justify-content: center;">
-      <span>⏱ 목표 ${totalTarget}분</span>
-      <span>⏳ 실제 ${totalActual}분</span>
-      <span style="color: ${totalDiff > 0 ? '#FF3B30' : totalDiff < 0 ? '#34C759' : '#666'};">📊 ${diffStr}분</span>
+    <div style="font-size: 11px; color: #86868b; margin-bottom: 12px; text-align: center;">
+      목표 ${formatMinutesToTime(totalTarget)} / 실제 ${formatMinutesToTime(totalActual)} <span style="color: ${totalDiff > 0 ? '#FF3B30' : totalDiff < 0 ? '#34C759' : '#666'};">(${diffSign}${formatMinutesToTime(diffAbs)})</span>
     </div>
     <div class="task-list">
   `;
@@ -1095,7 +1094,8 @@ function renderTaskView() {
   });
 
   const totalDiff = totalActual - totalTarget;
-  const diffStr = totalDiff === 0 ? '±0' : (totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`);
+  const diffSign = totalDiff === 0 ? '±' : (totalDiff > 0 ? '+' : '-');
+  const diffAbs = Math.abs(totalDiff);
 
   const content = document.getElementById('content');
   const dateLabel = formatDateLabelShort(targetDateStr);
@@ -1110,10 +1110,8 @@ function renderTaskView() {
       </div>
       <button onclick="changeDate(1)" style="font-size: 16px; padding: 4px 12px; color: #999;">▶</button>
     </div>
-    <div style="display: flex; gap: 8px; font-size: 11px; color: #86868b; margin-bottom: 12px; justify-content: center;">
-      <span>⏱ 목표 ${totalTarget}분</span>
-      <span>⏳ 실제 ${totalActual}분</span>
-      <span style="color: ${totalDiff > 0 ? '#FF3B30' : totalDiff < 0 ? '#34C759' : '#666'};">📊 ${diffStr}분</span>
+    <div style="font-size: 11px; color: #86868b; margin-bottom: 12px; text-align: center;">
+      목표 ${formatMinutesToTime(totalTarget)} / 실제 ${formatMinutesToTime(totalActual)} <span style="color: ${totalDiff > 0 ? '#FF3B30' : totalDiff < 0 ? '#34C759' : '#666'};">(${diffSign}${formatMinutesToTime(diffAbs)})</span>
     </div>
     <button onclick="addNewTask()" style="width: 100%; margin-bottom: 12px; padding: 8px; background: #999; color: white; border-radius: 8px; cursor: pointer; border: none; font-size: 13px;">+ 할일 추가</button>
     <div class="task-list" id="task-sortable">
@@ -1277,6 +1275,15 @@ function formatDateLabelShort(dateString) {
 function formatDateShort(dateString) {
   const date = new Date(dateString);
   return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function formatMinutesToTime(minutes) {
+  if (minutes === 0) return '0분';
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (hours === 0) return `${mins}분`;
+  if (mins === 0) return `${hours}시간`;
+  return `${hours}시간 ${mins}분`;
 }
 
 function updateLastUpdateTime() {
