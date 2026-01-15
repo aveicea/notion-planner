@@ -94,8 +94,8 @@ window.toggleDDaySelector = async function() {
 
     html += `
       <button onclick="selectDDay('${dateStr}', '${title.replace(/'/g, "\\'")}', '${item.id}')"
-        style="padding: 12px; background: ${isSelected ? '#007AFF' : '#f5f5f7'}; color: ${isSelected ? 'white' : '#333'};
-        border: 1px solid ${isSelected ? '#007AFF' : '#e5e5e7'}; border-radius: 8px; cursor: pointer; text-align: left; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
+        style="padding: 12px; background: ${isSelected ? '#999' : '#f5f5f7'}; color: ${isSelected ? 'white' : '#333'};
+        border: 1px solid ${isSelected ? '#999' : '#e5e5e7'}; border-radius: 8px; cursor: pointer; text-align: left; font-size: 13px; display: flex; justify-content: space-between; align-items: center;">
         <span style="font-weight: 500;">${title}</span>
         <span style="font-weight: 600; font-size: 14px; opacity: ${isSelected ? '1' : '0.7'};">${dDayText}</span>
       </button>
