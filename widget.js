@@ -933,6 +933,34 @@ window.updateDate = async function(taskId, newDate) {
   }
 };
 
+window.updateTargetTimeInTask = async function(taskId, newTime) {
+  if (newTime === '' || newTime === null) return;
+
+  const timeValue = parseInt(newTime);
+  if (isNaN(timeValue)) return;
+
+  const task = currentData.results.find(t => t.id === taskId);
+  if (!task) return;
+
+  const originalTime = task.properties?.['목표 시간']?.number;
+  if (originalTime === timeValue) return;
+
+  const loading = document.getElementById('loading');
+  loading.textContent = '⏳';
+
+  try {
+    await updateNotionPage(taskId, {
+      '목표 시간': { number: timeValue }
+    });
+
+    await fetchData();
+  } catch (error) {
+    console.error('목표 시간 업데이트 실패:', error);
+  } finally {
+    loading.textContent = '';
+  }
+};
+
 window.updateDateInTask = async function(taskId, newDate) {
   if (!newDate) return;
   
@@ -1489,14 +1517,14 @@ function renderTaskView() {
     const completed = task.properties?.['완료']?.checkbox;
 
     html += `
-      <div class="task-item ${completed ? 'completed' : ''}" data-id="${task.id}" style="border-left: 3px solid #999; display: flex; gap: 8px;">
-        <div class="drag-handle" style="cursor: move; color: #999; font-size: 16px; display: flex; align-items: center; user-select: none; -webkit-user-select: none;">≡</div>
-        <div class="task-header" style="flex: 1;">
+      <div class="task-item ${completed ? 'completed' : ''}" data-id="${task.id}" style="border-left: 3px solid #999; display: flex;">
+        <div class="drag-handle" style="width: 30px; cursor: move; opacity: 0; user-select: none; -webkit-user-select: none; flex-shrink: 0;"></div>
+        <div class="task-header" style="flex: 1; margin-left: -22px;">
           <div class="task-content" style="flex: 1;">
             <div class="task-title ${completed ? 'completed' : ''}" style="cursor: pointer;" onclick="editTask('${task.id}')">${title}</div>
             <div style="font-size: 11px; color: #86868b; margin-top: 6px; display: flex; gap: 8px; align-items: center;">
               ${priority ? `<span style="background: #999; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">${priority}</span>` : ''}
-              ${targetTime ? `<span>⏱ ${targetTime}분</span>` : ''}
+              ${targetTime !== undefined ? `<span style="cursor: pointer; position: relative; display: inline-block;">⏱ ${targetTime}분<input type="number" value="${targetTime || 0}" onchange="updateTargetTimeInTask('${task.id}', this.value)" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;"></span>` : ''}
               ${dateStart ? `<span style="font-size: 10px;">${formatDateShort(dateStart)}</span>` : ''}
               <span style="cursor: pointer; font-size: 14px; position: relative; display: inline-block; width: 18px; height: 18px;">
                 →
@@ -2149,9 +2177,9 @@ function renderCalendarView() {
         const displayTitle = bookName ? `[${bookName}] ${title}` : title;
 
         html += `
-          <div class="calendar-item" data-id="${item.id}" data-date="${dateStr}" style="display: flex; gap: 8px; align-items: center;">
-            <div class="drag-handle" style="cursor: move; color: #999; font-size: 14px; user-select: none; -webkit-user-select: none;">≡</div>
-            <div style="font-size: 12px; color: #333; flex: 1;">${displayTitle}</div>
+          <div class="calendar-item" data-id="${item.id}" data-date="${dateStr}" style="display: flex; align-items: center;">
+            <div class="drag-handle" style="width: 30px; cursor: move; opacity: 0; user-select: none; -webkit-user-select: none; flex-shrink: 0;"></div>
+            <div style="font-size: 12px; color: #333; flex: 1; margin-left: -22px;">${displayTitle}</div>
           </div>
         `;
       });
