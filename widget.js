@@ -2114,9 +2114,6 @@ function renderCalendarView() {
   // CALENDAR 모드일 때는 플래너 통계만 표시
   if (plannerCalendarViewMode) {
     content.innerHTML = `
-      <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px; gap: 4px;">
-        <button onclick="toggleCalendarView()" style="font-size: 12px; padding: 4px 8px;">닫기</button>
-      </div>
       ${renderPlannerCalendarHTML()}
     `;
     return;
@@ -2152,7 +2149,6 @@ function renderCalendarView() {
     <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px; gap: 4px;">
       <button onclick="undoCalendarSync()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="되돌리기">↩️</button>
       <button onclick="syncPlannerToCalendar()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="플래너 동기화">🔄</button>
-      <button onclick="toggleCalendarView()" style="font-size: 12px; padding: 4px 8px;">닫기</button>
     </div>
     <button onclick="loadPrevCalendar()" style="width: 100%; background: #e5e5e7; color: #333; border: none; border-radius: 4px; padding: 8px; font-size: 11px; cursor: pointer; margin-bottom: 12px;">더보기</button>
   `;
@@ -2230,13 +2226,12 @@ function initCalendarDragDrop() {
 
     // 모바일 터치 드래그
     handle.addEventListener('touchstart', (e) => {
-      e.preventDefault();
       draggedItem = item;
       touchStartY = e.touches[0].clientY;
       item.style.opacity = '0.5';
       item.style.position = 'relative';
       item.style.zIndex = '1000';
-    }, { passive: false });
+    }, { passive: true });
 
     handle.addEventListener('touchmove', (e) => {
       e.preventDefault();
