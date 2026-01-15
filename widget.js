@@ -1480,7 +1480,7 @@ function renderTimelineView() {
             ${!completed ? `
               <div style="display: flex; gap: 16px; align-items: center;">
                 ${start && end ? `
-                  <button onclick="duplicateTask('${task.id}')" style="font-size: 16px; padding: 0; background: none; color: inherit; border: none; cursor: pointer; flex-shrink: 0;">+</button>
+                  <button onclick="duplicateTask('${task.id}')" style="font-size: 18px; padding: 2px 4px; background: none; color: inherit; border: none; cursor: pointer; flex-shrink: 0; display: inline-block; min-width: 20px; height: 20px; line-height: 1;">+</button>
                 ` : ''}
                 <span style="cursor: pointer; font-size: 16px; position: relative; display: inline-block; width: 20px; height: 20px; flex-shrink: 0;">
                   →
