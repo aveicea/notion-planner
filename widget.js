@@ -152,6 +152,12 @@ function autoSelectClosestDDay() {
   console.log('=== D-Day 디버그 ===');
   console.log('전체 항목 수:', ddayData.results.length);
 
+  // 첫 번째 항목의 속성 출력
+  if (ddayData.results.length > 0) {
+    console.log('첫 번째 항목의 속성들:', Object.keys(ddayData.results[0].properties));
+    console.log('첫 번째 항목 전체:', ddayData.results[0].properties);
+  }
+
   // 체크박스 체크된 항목 확인
   const checkedItems = ddayData.results.filter(item => item.properties?.['디데이 표시']?.checkbox === true);
   console.log('디데이 표시 체크된 항목 수:', checkedItems.length);
