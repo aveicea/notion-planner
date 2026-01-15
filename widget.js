@@ -1233,8 +1233,13 @@ window.updateRating = async function(taskId, value) {
 document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
 
-  // 메인 플래너 데이터만 먼저 로드해서 빠르게 표시
+  // 메인 플래너 데이터 일부만 먼저 로드해서 빠르게 표시 (오늘 ±7~30일)
   await fetchData();
+
+  // 전체 플래너 데이터 백그라운드에서 로드
+  fetchAllData().catch(err => {
+    console.error('전체 데이터 로드 실패:', err);
+  });
 
   // D-Day 데이터는 백그라운드에서 로드
   fetchDDayData().then(() => {
@@ -1249,7 +1254,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Calendar loading failed:', err);
   });
 
-  setInterval(fetchData, 300000);
+  setInterval(fetchAllData, 300000);
 
   setInterval(() => {
     console.log('keepalive');
@@ -1278,7 +1283,7 @@ async function fetchData(retryCount = 0) {
   loading.textContent = '⏳';
 
   try {
-    // 오늘 기준 앞뒤 날짜 계산
+    // 오늘 기준 앞뒤 날짜 계산 (빠른 초기 로드용)
     const today = new Date();
     const pastDate = new Date(today);
     pastDate.setDate(today.getDate() - 7); // 7일 전
@@ -1359,6 +1364,39 @@ async function fetchData(retryCount = 0) {
       `<div class="empty-message" style="white-space: pre-line;">❌ 오류\n\n${errorMessage}</div>`;
   } finally {
     loading.textContent = '';
+  }
+}
+
+async function fetchAllData() {
+  try {
+    const notionUrl = `https://api.notion.com/v1/databases/${DATABASE_ID}/query`;
+    const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_API_KEY}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        page_size: 100,
+        sorts: [{ property: "날짜", direction: "descending" }]
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status}`);
+    }
+
+    currentData = await response.json();
+
+    // 책 이름 불러오기
+    await fetchBookNames();
+
+    // 재렌더링
+    renderData();
+    console.log('전체 데이터 로드 완료:', currentData.results.length, '개 항목');
+  } catch (error) {
+    console.error('전체 데이터 로드 실패:', error);
   }
 }
 
