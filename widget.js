@@ -2223,7 +2223,7 @@ function renderCalendarView() {
 
         html += `
           <div class="calendar-item" data-id="${item.id}" data-date="${dateStr}" style="display: flex; align-items: center;">
-            <div class="drag-handle" style="width: 70px; cursor: move; opacity: 0; user-select: none; -webkit-user-select: none; touch-action: none; flex-shrink: 0;"></div>
+            <div class="drag-handle" style="width: 70px; cursor: move; background: rgba(200,200,200,0.3); user-select: none; -webkit-user-select: none; touch-action: none; flex-shrink: 0; display: flex; align-items: center; justify-content: center; color: #999;">⋮⋮</div>
             <div style="font-size: 12px; color: #333; flex: 1; margin-left: -62px;">${displayTitle}</div>
           </div>
         `;
