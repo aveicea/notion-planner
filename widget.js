@@ -25,6 +25,7 @@ window.changeDate = function(days) {
 
 window.goToday = function() {
   currentDate = new Date();
+  currentDate.setHours(0, 0, 0, 0); // 시간을 명시적으로 00:00:00으로 설정
   renderData();
 };
 
@@ -419,7 +420,10 @@ function renderPlannerCalendarHTML() {
 }
 
 window.goToDate = function(dateStr) {
-  currentDate = new Date(dateStr);
+  // YYYY-MM-DD 형식을 로컬 날짜로 변환
+  const [year, month, day] = dateStr.split('-').map(Number);
+  currentDate = new Date(year, month - 1, day);
+  currentDate.setHours(0, 0, 0, 0); // 시간을 명시적으로 00:00:00으로 설정
   calendarViewMode = false;
   plannerCalendarViewMode = false;
   const viewToggle = document.getElementById('view-toggle');
@@ -469,6 +473,7 @@ window.toggleCalendarView = async function(targetDate = null) {
       // YYYY-MM-DD 형식을 로컬 날짜로 변환
       const [year, month, day] = targetDate.split('-').map(Number);
       currentDate = new Date(year, month - 1, day);
+      currentDate.setHours(0, 0, 0, 0); // 시간을 명시적으로 00:00:00으로 설정
     }
     renderData();
   }
