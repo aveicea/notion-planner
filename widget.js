@@ -2072,6 +2072,81 @@ window.saveToPlanner = async function(dateStr) {
   }
 };
 
+window.saveAllToPlanner = async function() {
+  const loading = document.getElementById('loading');
+  loading.textContent = '⏳';
+
+  try {
+    let totalAdded = 0;
+    let totalSkipped = 0;
+
+    // 프리플랜의 모든 항목 순회
+    for (const item of calendarData.results) {
+      const title = getCalendarItemTitle(item);
+      const dateStart = item.properties?.['날짜']?.date?.start;
+      const bookRelation = item.properties?.['책']?.relation?.[0];
+
+      if (!dateStart) continue;
+
+      // 플래너에 이미 같은 제목과 날짜의 항목이 있는지 확인
+      const isDuplicate = currentData.results.some(plannerItem => {
+        const plannerTitle = plannerItem.properties?.['범위']?.title?.[0]?.plain_text || '';
+        const plannerDate = plannerItem.properties?.['날짜']?.date?.start || '';
+        return plannerTitle === title && plannerDate === dateStart;
+      });
+
+      if (isDuplicate) {
+        console.log('중복 항목 건너뛰기:', title, dateStart);
+        totalSkipped++;
+        continue;
+      }
+
+      const properties = {
+        '범위': {
+          title: [{ text: { content: title } }]
+        },
+        '날짜': {
+          date: { start: dateStart }
+        },
+        '완료': { checkbox: false }
+      };
+
+      if (bookRelation) {
+        properties['책'] = { relation: [{ id: bookRelation.id }] };
+      }
+
+      const notionUrl = 'https://api.notion.com/v1/pages';
+      const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_API_KEY}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          parent: { database_id: DATABASE_ID },
+          properties: properties
+        })
+      });
+
+      if (!response.ok) {
+        console.error('플래너 저장 실패:', title);
+        continue;
+      }
+      totalAdded++;
+    }
+
+    console.log(`전체 저장 완료: ${totalAdded}개 추가, ${totalSkipped}개 건너뜀`);
+
+    // alert 없이 바로 새로고침
+    await fetchData();
+  } catch (error) {
+    console.error('Save all error:', error);
+  } finally {
+    loading.textContent = '';
+  }
+};
+
 window.undoCalendarSync = async function() {
   console.log('되돌리기 시도, 항목 수:', lastSyncedItems.length);
 
@@ -2320,7 +2395,8 @@ function renderCalendarView() {
 
   let html = `
     <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px; gap: 4px;">
-      <button onclick="syncPlannerToCalendar()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="플래너 동기화">💾</button>
+      <button onclick="saveAllToPlanner()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="프리플랜 → 플래너">💾</button>
+      <button onclick="syncPlannerToCalendar()" style="font-size: 14px; padding: 2px; background: none; border: none; cursor: pointer;" title="플래너 동기화">🔄</button>
     </div>
     <button onclick="loadPrevCalendar()" style="width: 100%; background: #e5e5e7; color: #333; border: none; border-radius: 4px; padding: 8px; font-size: 11px; cursor: pointer; margin-bottom: 12px;">더보기</button>
   `;
