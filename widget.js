@@ -852,7 +852,17 @@ window.cancelAddTask = function() {
 window.toggleComplete = async function(taskId, completed) {
   const loading = document.getElementById('loading');
   loading.textContent = '⏳';
-  
+
+  // 백업
+  const task = currentData.results.find(t => t.id === taskId);
+  if (!task) return;
+  const originalCompleted = task.properties['완료'].checkbox;
+
+  // UI 즉시 업데이트
+  task.properties['완료'].checkbox = completed;
+  renderData();
+
+  // 백그라운드에서 API 호출
   try {
     await updateNotionPage(taskId, {
       '완료': { checkbox: completed }
@@ -860,6 +870,9 @@ window.toggleComplete = async function(taskId, completed) {
     setTimeout(() => fetchData(), 500);
   } catch (error) {
     console.error('업데이트 실패:', error);
+    // 실패시 롤백
+    task.properties['완료'].checkbox = originalCompleted;
+    renderData();
     loading.textContent = '';
   }
 };
@@ -904,6 +917,19 @@ window.updateTime = async function(taskId, field, value, inputElement) {
   const loading = document.getElementById('loading');
   loading.textContent = '⏳';
 
+  // 백업
+  const task = currentData.results.find(t => t.id === taskId);
+  if (!task) return;
+  const originalValue = task.properties[field]?.rich_text?.[0]?.plain_text || '';
+
+  // UI 즉시 업데이트
+  if (!task.properties[field]) {
+    task.properties[field] = { rich_text: [] };
+  }
+  task.properties[field].rich_text = [{ type: 'text', text: { content: formattedValue }, plain_text: formattedValue }];
+  renderData();
+
+  // 백그라운드에서 API 호출
   try {
     await updateNotionPage(taskId, {
       [field]: {
@@ -913,36 +939,66 @@ window.updateTime = async function(taskId, field, value, inputElement) {
     setTimeout(() => fetchData(), 500);
   } catch (error) {
     console.error('시간 업데이트 실패:', error);
+    // 실패시 롤백
+    if (originalValue) {
+      task.properties[field].rich_text = [{ type: 'text', text: { content: originalValue }, plain_text: originalValue }];
+    } else {
+      task.properties[field].rich_text = [];
+    }
+    renderData();
     loading.textContent = '';
   }
 };
 
 window.updateDate = async function(taskId, newDate) {
   if (!newDate) return;
-  
+
   const task = currentData.results.find(t => t.id === taskId);
   if (!task) return;
-  
+
   const originalDate = task.properties?.['날짜']?.date?.start;
-  
+
   // 날짜가 실제로 바뀌었는지 확인
   if (originalDate === newDate) return;
-  
+
   const loading = document.getElementById('loading');
   loading.textContent = '⏳';
-  
+
+  // 복제 + 제목에 ' 추가
+  const originalTitle = task.properties?.['범위']?.title?.[0]?.plain_text || '';
+  const newTitle = originalTitle + "'";
+
+  const bookRelation = task.properties?.['책']?.relation?.[0];
+  const targetTime = task.properties?.['목표 시간']?.number;
+  const start = task.properties?.['시작']?.rich_text?.[0]?.plain_text;
+  const end = task.properties?.['끝']?.rich_text?.[0]?.plain_text;
+  const rating = task.properties?.['(੭•̀ᴗ•̀)੭']?.select?.name;
+  const priority = task.properties?.['우선순위']?.select?.name;
+
+  // 임시 ID로 새 항목 생성
+  const tempId = 'temp-' + Date.now();
+  const tempTask = {
+    id: tempId,
+    created_time: new Date().toISOString(),
+    properties: {
+      '범위': { title: [{ plain_text: newTitle, text: { content: newTitle } }] },
+      '날짜': { date: { start: newDate } },
+      '완료': { checkbox: false },
+      '목표 시간': { number: targetTime || null },
+      '시작': { rich_text: start ? [{ plain_text: start, text: { content: start } }] : [] },
+      '끝': { rich_text: end ? [{ plain_text: end, text: { content: end } }] : [] },
+      '(੭•̀ᴗ•̀)੭': rating ? { select: { name: rating } } : { select: null },
+      '우선순위': priority ? { select: { name: priority } } : { select: null },
+      '책': { relation: bookRelation ? [bookRelation] : [] }
+    }
+  };
+
+  // UI 즉시 업데이트
+  currentData.results.unshift(tempTask);
+  renderData();
+
+  // 백그라운드에서 API 호출
   try {
-    // 복제 + 제목에 ' 추가
-    const originalTitle = task.properties?.['범위']?.title?.[0]?.plain_text || '';
-    const newTitle = originalTitle + "'";
-    
-    const bookRelation = task.properties?.['책']?.relation?.[0];
-    const targetTime = task.properties?.['목표 시간']?.number;
-    const start = task.properties?.['시작']?.rich_text?.[0]?.plain_text;
-    const end = task.properties?.['끝']?.rich_text?.[0]?.plain_text;
-    const rating = task.properties?.['(੭•̀ᴗ•̀)੭']?.select?.name;
-    const priority = task.properties?.['우선순위']?.select?.name;
-    
     const properties = {
       '범위': {
         title: [{ text: { content: newTitle } }]
@@ -952,31 +1008,31 @@ window.updateDate = async function(taskId, newDate) {
       },
       '완료': { checkbox: false }
     };
-    
+
     if (bookRelation) {
       properties['책'] = { relation: [{ id: bookRelation.id }] };
     }
-    
+
     if (targetTime) {
       properties['목표 시간'] = { number: targetTime };
     }
-    
+
     if (start) {
       properties['시작'] = { rich_text: [{ type: 'text', text: { content: start } }] };
     }
-    
+
     if (end) {
       properties['끝'] = { rich_text: [{ type: 'text', text: { content: end } }] };
     }
-    
+
     if (rating) {
       properties['(੭•̀ᴗ•̀)੭'] = { select: { name: rating } };
     }
-    
+
     if (priority) {
       properties['우선순위'] = { select: { name: priority } };
     }
-    
+
     const notionUrl = 'https://api.notion.com/v1/pages';
     const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
       method: 'POST',
@@ -996,6 +1052,9 @@ window.updateDate = async function(taskId, newDate) {
     setTimeout(() => fetchData(), 500);
   } catch (error) {
     console.error('날짜 변경 실패:', error);
+    // 실패시 임시 항목 제거
+    currentData.results = currentData.results.filter(t => t.id !== tempId);
+    renderData();
     loading.textContent = '';
   }
 };
@@ -1015,6 +1074,11 @@ window.updateTargetTimeInTask = async function(taskId, newTime) {
   const loading = document.getElementById('loading');
   loading.textContent = '⏳';
 
+  // UI 즉시 업데이트
+  task.properties['목표 시간'].number = timeValue;
+  renderData();
+
+  // 백그라운드에서 API 호출
   try {
     await updateNotionPage(taskId, {
       '목표 시간': { number: timeValue }
@@ -1023,6 +1087,9 @@ window.updateTargetTimeInTask = async function(taskId, newTime) {
     await fetchData();
   } catch (error) {
     console.error('목표 시간 업데이트 실패:', error);
+    // 실패시 롤백
+    task.properties['목표 시간'].number = originalTime;
+    renderData();
   } finally {
     loading.textContent = '';
   }
@@ -1030,28 +1097,51 @@ window.updateTargetTimeInTask = async function(taskId, newTime) {
 
 window.updateDateInTask = async function(taskId, newDate) {
   if (!newDate) return;
-  
+
   const task = currentData.results.find(t => t.id === taskId);
   if (!task) return;
-  
+
   const originalDate = task.properties?.['날짜']?.date?.start;
-  
+
   if (originalDate === newDate) return;
-  
+
   const loading = document.getElementById('loading');
   loading.textContent = '⏳';
-  
+
+  const originalTitle = task.properties?.['범위']?.title?.[0]?.plain_text || '';
+  const newTitle = originalTitle + "'";
+
+  const bookRelation = task.properties?.['책']?.relation?.[0];
+  const targetTime = task.properties?.['목표 시간']?.number;
+  const start = task.properties?.['시작']?.rich_text?.[0]?.plain_text;
+  const end = task.properties?.['끝']?.rich_text?.[0]?.plain_text;
+  const rating = task.properties?.['(੭•̀ᴗ•̀)੭']?.select?.name;
+  const priority = task.properties?.['우선순위']?.select?.name;
+
+  // 임시 ID로 새 항목 생성
+  const tempId = 'temp-' + Date.now();
+  const tempTask = {
+    id: tempId,
+    created_time: new Date().toISOString(),
+    properties: {
+      '범위': { title: [{ plain_text: newTitle, text: { content: newTitle } }] },
+      '날짜': { date: { start: newDate } },
+      '완료': { checkbox: false },
+      '목표 시간': { number: targetTime || null },
+      '시작': { rich_text: start ? [{ plain_text: start, text: { content: start } }] : [] },
+      '끝': { rich_text: end ? [{ plain_text: end, text: { content: end } }] : [] },
+      '(੭•̀ᴗ•̀)੭': rating ? { select: { name: rating } } : { select: null },
+      '우선순위': priority ? { select: { name: priority } } : { select: null },
+      '책': { relation: bookRelation ? [bookRelation] : [] }
+    }
+  };
+
+  // UI 즉시 업데이트
+  currentData.results.unshift(tempTask);
+  renderData();
+
+  // 백그라운드에서 API 호출
   try {
-    const originalTitle = task.properties?.['범위']?.title?.[0]?.plain_text || '';
-    const newTitle = originalTitle + "'";
-    
-    const bookRelation = task.properties?.['책']?.relation?.[0];
-    const targetTime = task.properties?.['목표 시간']?.number;
-    const start = task.properties?.['시작']?.rich_text?.[0]?.plain_text;
-    const end = task.properties?.['끝']?.rich_text?.[0]?.plain_text;
-    const rating = task.properties?.['(੭•̀ᴗ•̀)੭']?.select?.name;
-    const priority = task.properties?.['우선순위']?.select?.name;
-    
     const properties = {
       '범위': {
         title: [{ text: { content: newTitle } }]
@@ -1061,31 +1151,31 @@ window.updateDateInTask = async function(taskId, newDate) {
       },
       '완료': { checkbox: false }
     };
-    
+
     if (bookRelation) {
       properties['책'] = { relation: [{ id: bookRelation.id }] };
     }
-    
+
     if (targetTime) {
       properties['목표 시간'] = { number: targetTime };
     }
-    
+
     if (start) {
       properties['시작'] = { rich_text: [{ type: 'text', text: { content: start } }] };
     }
-    
+
     if (end) {
       properties['끝'] = { rich_text: [{ type: 'text', text: { content: end } }] };
     }
-    
+
     if (rating) {
       properties['(੭•̀ᴗ•̀)੭'] = { select: { name: rating } };
     }
-    
+
     if (priority) {
       properties['우선순위'] = { select: { name: priority } };
     }
-    
+
     const notionUrl = 'https://api.notion.com/v1/pages';
     const response = await fetch(`${CORS_PROXY}${encodeURIComponent(notionUrl)}`, {
       method: 'POST',
@@ -1105,6 +1195,9 @@ window.updateDateInTask = async function(taskId, newDate) {
     setTimeout(() => fetchData(), 500);
   } catch (error) {
     console.error('날짜 변경 실패:', error);
+    // 실패시 임시 항목 제거
+    currentData.results = currentData.results.filter(t => t.id !== tempId);
+    renderData();
     loading.textContent = '';
   }
 };
@@ -1112,7 +1205,17 @@ window.updateDateInTask = async function(taskId, newDate) {
 window.updateRating = async function(taskId, value) {
   const loading = document.getElementById('loading');
   loading.textContent = '⏳';
-  
+
+  // 백업
+  const task = currentData.results.find(t => t.id === taskId);
+  if (!task) return;
+  const originalRating = task.properties['(੭•̀ᴗ•̀)੭']?.select?.name || null;
+
+  // UI 즉시 업데이트
+  task.properties['(੭•̀ᴗ•̀)੭'] = value ? { select: { name: value } } : { select: null };
+  renderData();
+
+  // 백그라운드에서 API 호출
   try {
     await updateNotionPage(taskId, {
       '(੭•̀ᴗ•̀)੭': value ? { select: { name: value } } : { select: null }
@@ -1120,6 +1223,9 @@ window.updateRating = async function(taskId, value) {
     setTimeout(() => fetchData(), 500);
   } catch (error) {
     console.error('집중도 업데이트 실패:', error);
+    // 실패시 롤백
+    task.properties['(੭•̀ᴗ•̀)੭'] = originalRating ? { select: { name: originalRating } } : { select: null };
+    renderData();
     loading.textContent = '';
   }
 };
