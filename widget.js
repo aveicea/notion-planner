@@ -155,7 +155,14 @@ function autoSelectClosestDDay() {
   // 첫 번째 항목의 속성 출력
   if (ddayData.results.length > 0) {
     console.log('첫 번째 항목의 속성들:', Object.keys(ddayData.results[0].properties));
-    console.log('첫 번째 항목 전체:', ddayData.results[0].properties);
+    console.log('디데이 표시 속성 값:', ddayData.results[0].properties?.['디데이 표시']);
+
+    // 처음 5개 항목의 디데이 표시 값 확인
+    ddayData.results.slice(0, 5).forEach((item, i) => {
+      const title = item.properties?.['이름']?.title?.[0]?.plain_text || '제목없음';
+      const ddayCheck = item.properties?.['디데이 표시'];
+      console.log(`항목 ${i+1}: ${title}`, ddayCheck);
+    });
   }
 
   // 체크박스 체크된 항목 확인
@@ -1431,7 +1438,7 @@ function renderTimelineView() {
               목표 ${formatMinutesToTime(targetTime)} / 실제 ${formatMinutesToTime(actualTime)}${end ? ` (${actualTime - targetTime > 0 ? '+' : ''}${formatMinutesToTime(Math.abs(actualTime - targetTime))})` : ''}
             </div>
             ${!completed ? `
-              <div style="display: flex; gap: 8px; align-items: center;">
+              <div style="display: flex; gap: 16px; align-items: center;">
                 ${start && end ? `
                   <button onclick="duplicateTask('${task.id}')" style="font-size: 16px; padding: 0; background: none; color: inherit; border: none; cursor: pointer; flex-shrink: 0;">+</button>
                 ` : ''}
