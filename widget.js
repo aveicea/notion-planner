@@ -1060,13 +1060,16 @@ window.updateRating = async function(taskId, value) {
 document.addEventListener('DOMContentLoaded', async () => {
   setupEventListeners();
 
-  // 메인 데이터와 D-Day 데이터를 동시에 로딩
-  const [mainData, ddayData] = await Promise.all([
-    fetchData(),
-    fetchDDayData().then(() => autoSelectClosestDDay()).catch(err => {
-      console.error('D-Day loading failed:', err);
-    })
-  ]);
+  // 메인 데이터만 먼저 로드해서 빠르게 표시
+  await fetchData();
+
+  // D-Day 데이터는 백그라운드에서 로드
+  fetchDDayData().then(() => {
+    autoSelectClosestDDay();
+    renderData(); // D-Day 로드 후 화면 업데이트
+  }).catch(err => {
+    console.error('D-Day loading failed:', err);
+  });
 
   setInterval(fetchData, 300000);
 
@@ -1422,12 +1425,17 @@ function renderTimelineView() {
               목표 ${formatMinutesToTime(targetTime)} / 실제 ${formatMinutesToTime(actualTime)}${end ? ` (${actualTime - targetTime > 0 ? '+' : ''}${formatMinutesToTime(Math.abs(actualTime - targetTime))})` : ''}
             </div>
             ${!completed ? `
-              <span style="cursor: pointer; font-size: 16px; position: relative; display: inline-block; width: 20px; height: 20px; flex-shrink: 0;">
-                →
-                <input type="date" value="${dateStart}"
-                  onchange="updateDate('${task.id}', this.value)"
-                  style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
-              </span>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                ${start && end ? `
+                  <button onclick="duplicateTask('${task.id}')" style="font-size: 14px; padding: 2px 6px; background: #34C759; color: white; border: none; border-radius: 4px; cursor: pointer; flex-shrink: 0;">+</button>
+                ` : ''}
+                <span style="cursor: pointer; font-size: 16px; position: relative; display: inline-block; width: 20px; height: 20px; flex-shrink: 0;">
+                  →
+                  <input type="date" value="${dateStart}"
+                    onchange="updateDate('${task.id}', this.value)"
+                    style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+                </span>
+              </div>
             ` : ''}
           </div>
         </div>
