@@ -152,6 +152,12 @@ function autoSelectClosestDDay() {
   console.log('=== D-Day 디버그 ===');
   console.log('전체 항목 수:', ddayData.results.length);
 
+  // 첫 번째 항목의 속성 출력
+  if (ddayData.results.length > 0) {
+    console.log('첫 번째 항목의 속성들:', Object.keys(ddayData.results[0].properties));
+    console.log('첫 번째 항목 전체:', ddayData.results[0].properties);
+  }
+
   // 체크박스 체크된 항목 확인
   const checkedItems = ddayData.results.filter(item => item.properties?.['디데이 표시']?.checkbox === true);
   console.log('디데이 표시 체크된 항목 수:', checkedItems.length);
@@ -1427,7 +1433,7 @@ function renderTimelineView() {
             ${!completed ? `
               <div style="display: flex; gap: 8px; align-items: center;">
                 ${start && end ? `
-                  <button onclick="duplicateTask('${task.id}')" style="font-size: 14px; padding: 2px 6px; background: #34C759; color: white; border: none; border-radius: 4px; cursor: pointer; flex-shrink: 0;">+</button>
+                  <button onclick="duplicateTask('${task.id}')" style="font-size: 16px; padding: 0; background: none; color: inherit; border: none; cursor: pointer; flex-shrink: 0;">+</button>
                 ` : ''}
                 <span style="cursor: pointer; font-size: 16px; position: relative; display: inline-block; width: 20px; height: 20px; flex-shrink: 0;">
                   →
