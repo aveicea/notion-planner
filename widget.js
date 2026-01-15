@@ -10,6 +10,7 @@ let calendarData = null;
 let ddayData = null;
 let bookNames = {};
 let currentDate = new Date();
+currentDate.setHours(0, 0, 0, 0); // 초기화 시 시간을 00:00:00으로 설정
 let calendarViewMode = false;
 let calendarStartDate = new Date();
 let calendarEndDate = new Date();
@@ -474,6 +475,10 @@ window.toggleCalendarView = async function(targetDate = null) {
       const [year, month, day] = targetDate.split('-').map(Number);
       currentDate = new Date(year, month - 1, day);
       currentDate.setHours(0, 0, 0, 0); // 시간을 명시적으로 00:00:00으로 설정
+      // 디버깅: 날짜 확인
+      console.log('toggleCalendarView - targetDate:', targetDate);
+      console.log('toggleCalendarView - currentDate:', currentDate);
+      console.log('toggleCalendarView - formatDateToLocalString:', formatDateToLocalString(currentDate));
     }
     renderData();
   }
@@ -1537,6 +1542,9 @@ function updateDDayButton() {
 
 function renderTimelineView() {
   const targetDateStr = formatDateToLocalString(currentDate);
+  // 디버깅: 날짜 확인
+  console.log('renderTimelineView - currentDate:', currentDate);
+  console.log('renderTimelineView - targetDateStr:', targetDateStr);
 
   const dayTasks = currentData.results.filter(item => {
     const dateStart = item.properties?.['날짜']?.date?.start;
@@ -2056,9 +2064,12 @@ function formatDateShort(dateString) {
 
 function formatDateToLocalString(date) {
   // 로컬 날짜를 YYYY-MM-DD 형식으로 변환 (UTC 변환 없이)
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  // 시간을 0으로 설정하여 시간대 문제 방지
+  const localDate = new Date(date);
+  localDate.setHours(0, 0, 0, 0);
+  const year = localDate.getFullYear();
+  const month = String(localDate.getMonth() + 1).padStart(2, '0');
+  const day = String(localDate.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
 
