@@ -1524,7 +1524,13 @@ function renderTaskView() {
             <div class="task-title ${completed ? 'completed' : ''}" style="cursor: pointer;" onclick="editTask('${task.id}')">${title}</div>
             <div style="font-size: 11px; color: #86868b; margin-top: 6px; display: flex; gap: 8px; align-items: center;">
               ${priority ? `<span style="background: #999; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px;">${priority}</span>` : ''}
-              ${targetTime !== undefined ? `<span style="cursor: pointer; position: relative; display: inline-block;">⏱ ${targetTime}분<input type="number" value="${targetTime || 0}" onchange="updateTargetTimeInTask('${task.id}', this.value)" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;"></span>` : ''}
+              <span style="display: flex; align-items: center; gap: 4px;">
+                <span style="font-size: 11px;">⏱</span>
+                <input type="number" value="${targetTime || 0}"
+                  onblur="updateTargetTimeInTask('${task.id}', this.value)"
+                  style="width: 45px; padding: 4px; border: 1px solid #e5e5e7; border-radius: 4px; text-align: center; font-size: 11px;">
+                <span style="font-size: 11px;">분</span>
+              </span>
               ${dateStart ? `<span style="font-size: 10px;">${formatDateShort(dateStart)}</span>` : ''}
               <span style="cursor: pointer; font-size: 14px; position: relative; display: inline-block; width: 18px; height: 18px;">
                 →
