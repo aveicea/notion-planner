@@ -1489,9 +1489,9 @@ function renderTaskView() {
     const completed = task.properties?.['완료']?.checkbox;
 
     html += `
-      <div class="task-item ${completed ? 'completed' : ''}" data-id="${task.id}" style="border-left: 3px solid #999; display: flex; gap: 8px;">
-        <div class="drag-handle" style="cursor: move; color: #999; font-size: 16px; display: flex; align-items: center; user-select: none; -webkit-user-select: none;">≡</div>
-        <div class="task-header" style="flex: 1;">
+      <div class="task-item ${completed ? 'completed' : ''}" data-id="${task.id}" style="border-left: 3px solid #999; display: flex;">
+        <div class="drag-handle" style="width: 30px; cursor: move; opacity: 0; user-select: none; -webkit-user-select: none; flex-shrink: 0;"></div>
+        <div class="task-header" style="flex: 1; margin-left: -22px;">
           <div class="task-content" style="flex: 1;">
             <div class="task-title ${completed ? 'completed' : ''}" style="cursor: pointer;" onclick="editTask('${task.id}')">${title}</div>
             <div style="font-size: 11px; color: #86868b; margin-top: 6px; display: flex; gap: 8px; align-items: center;">
@@ -2149,9 +2149,9 @@ function renderCalendarView() {
         const displayTitle = bookName ? `[${bookName}] ${title}` : title;
 
         html += `
-          <div class="calendar-item" data-id="${item.id}" data-date="${dateStr}" style="display: flex; gap: 8px; align-items: center;">
-            <div class="drag-handle" style="cursor: move; color: #999; font-size: 14px; user-select: none; -webkit-user-select: none;">≡</div>
-            <div style="font-size: 12px; color: #333; flex: 1;">${displayTitle}</div>
+          <div class="calendar-item" data-id="${item.id}" data-date="${dateStr}" style="display: flex; align-items: center;">
+            <div class="drag-handle" style="width: 30px; cursor: move; opacity: 0; user-select: none; -webkit-user-select: none; flex-shrink: 0;"></div>
+            <div style="font-size: 12px; color: #333; flex: 1; margin-left: -22px;">${displayTitle}</div>
           </div>
         `;
       });
