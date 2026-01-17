@@ -480,9 +480,10 @@ window.toggleCalendarView = async function(targetDate = null) {
     plannerCalendarViewMode = false;
     viewToggle.textContent = 'LIST';
 
-    // 오늘 기준으로 앞으로 2주 보기
+    // 전날부터 2주 보기
     calendarStartDate = new Date();
     calendarStartDate.setHours(0, 0, 0, 0);
+    calendarStartDate.setDate(calendarStartDate.getDate() - 1); // 전날부터 시작
     calendarEndDate = new Date(calendarStartDate);
     calendarEndDate.setDate(calendarEndDate.getDate() + 14);
     await fetchCalendarData();
@@ -589,6 +590,7 @@ window.duplicateTask = async function(taskId) {
     const bookRelation = task.properties?.['책']?.relation?.[0];
     const targetTime = task.properties?.['목표 시간']?.number;
     const dateStart = task.properties?.['날짜']?.date?.start;
+    const plannerRelation = task.properties?.['PLANNER']?.relation;
     // 시작/끝 시간은 복제하지 않음
 
     const properties = {
@@ -609,11 +611,16 @@ window.duplicateTask = async function(taskId) {
     if (dateStart) {
       properties['날짜'] = { date: { start: dateStart } };
     }
-    
+
     // 우선순위 복사
     const priority = task.properties?.['우선순위']?.select?.name;
     if (priority) {
       properties['우선순위'] = { select: { name: priority } };
+    }
+
+    // PLANNER 관계형 복사
+    if (plannerRelation && plannerRelation.length > 0) {
+      properties['PLANNER'] = { relation: plannerRelation.map(r => ({ id: r.id })) };
     }
     
     const notionUrl = 'https://api.notion.com/v1/pages';
