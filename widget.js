@@ -2137,10 +2137,21 @@ window.linkPrePlanToPlanner = async function() {
     for (const prePlanItem of calendarData.results) {
       const prePlanTitle = getCalendarItemTitle(prePlanItem);
 
-      // 같은 제목을 가진 플래너 항목 찾기
+      // 프리플랜의 책 ID 가져오기
+      const prePlanBookId = prePlanItem.properties?.['책']?.relation?.[0]?.id;
+
+      // 책이 없으면 스킵
+      if (!prePlanBookId) {
+        continue;
+      }
+
+      // 같은 책을 가진 플래너 항목들 중에서 제목이 같은 항목 찾기
       const matchingPlannerItem = currentData.results.find(plannerItem => {
         const plannerTitle = getTaskTitle(plannerItem);
-        return plannerTitle === prePlanTitle;
+        const plannerBookId = plannerItem.properties?.['책']?.relation?.[0]?.id;
+
+        // 제목과 책이 모두 같아야 함
+        return plannerTitle === prePlanTitle && plannerBookId === prePlanBookId;
       });
 
       if (matchingPlannerItem) {
