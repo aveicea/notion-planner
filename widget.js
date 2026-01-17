@@ -2127,9 +2127,14 @@ window.linkPrePlanToPlanner = async function() {
   try {
     // 프리플랜과 플래너 데이터가 모두 있는지 확인
     if (!calendarData || !currentData) {
+      alert('데이터가 로드되지 않았습니다.');
       loading.textContent = '';
       return;
     }
+
+    console.log('=== 관계형 연결 시작 ===');
+    console.log('프리플랜 항목 수:', calendarData.results.length);
+    console.log('플래너 항목 수:', currentData.results.length);
 
     let linkCount = 0;
 
@@ -2140,8 +2145,11 @@ window.linkPrePlanToPlanner = async function() {
       // 프리플랜의 책 ID 가져오기
       const prePlanBookId = prePlanItem.properties?.['책']?.relation?.[0]?.id;
 
+      console.log(`프리플랜: "${prePlanTitle}", 책 ID: ${prePlanBookId || '없음'}`);
+
       // 책이 없으면 스킵
       if (!prePlanBookId) {
+        console.log('  -> 책 없어서 스킵');
         continue;
       }
 
@@ -2155,9 +2163,11 @@ window.linkPrePlanToPlanner = async function() {
       });
 
       if (matchingPlannerItem) {
+        console.log(`  -> 매칭 성공! 플래너 항목: "${getTaskTitle(matchingPlannerItem)}"`);
+
         // 프리플랜의 PLANNER 속성에 플래너 항목 연결
         const prePlanUpdateUrl = `https://api.notion.com/v1/pages/${prePlanItem.id}`;
-        await fetch(`${CORS_PROXY}${encodeURIComponent(prePlanUpdateUrl)}`, {
+        const res1 = await fetch(`${CORS_PROXY}${encodeURIComponent(prePlanUpdateUrl)}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -2173,9 +2183,16 @@ window.linkPrePlanToPlanner = async function() {
           })
         });
 
+        if (!res1.ok) {
+          const error = await res1.json();
+          console.error('프리플랜 업데이트 실패:', error);
+        } else {
+          console.log('  -> 프리플랜 PLANNER 속성 업데이트 성공');
+        }
+
         // 플래너의 PRE-PLAN 속성에 프리플랜 항목 연결
         const plannerUpdateUrl = `https://api.notion.com/v1/pages/${matchingPlannerItem.id}`;
-        await fetch(`${CORS_PROXY}${encodeURIComponent(plannerUpdateUrl)}`, {
+        const res2 = await fetch(`${CORS_PROXY}${encodeURIComponent(plannerUpdateUrl)}`, {
           method: 'PATCH',
           headers: {
             'Authorization': `Bearer ${NOTION_API_KEY}`,
@@ -2191,9 +2208,21 @@ window.linkPrePlanToPlanner = async function() {
           })
         });
 
+        if (!res2.ok) {
+          const error = await res2.json();
+          console.error('플래너 업데이트 실패:', error);
+        } else {
+          console.log('  -> 플래너 PRE-PLAN 속성 업데이트 성공');
+        }
+
         linkCount++;
+      } else {
+        console.log('  -> 매칭 실패 (같은 책의 같은 제목 항목 없음)');
       }
     }
+
+    console.log(`=== 총 ${linkCount}개 연결 완료 ===`);
+    alert(`${linkCount}개 항목 연결 완료`);
 
     // 데이터 새로고침
     await fetchCalendarData();
@@ -2201,6 +2230,7 @@ window.linkPrePlanToPlanner = async function() {
     renderCalendarView();
   } catch (error) {
     console.error('연결 실패:', error);
+    alert(`연결 실패: ${error.message}`);
   } finally {
     loading.textContent = '';
   }
