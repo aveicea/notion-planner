@@ -2146,6 +2146,15 @@ async function linkPrePlanToPlannerSilent() {
     });
 
     if (matchingPlannerItem) {
+      // 이미 연결되어 있는지 확인
+      const existingPlannerRelation = prePlanItem.properties?.['PLANNER']?.relation || [];
+      const alreadyLinked = existingPlannerRelation.some(rel => rel.id === matchingPlannerItem.id);
+
+      // 이미 연결되어 있으면 스킵
+      if (alreadyLinked) {
+        continue;
+      }
+
       // 프리플랜의 PLANNER 속성에 플래너 항목 연결
       const prePlanUpdateUrl = `https://api.notion.com/v1/pages/${prePlanItem.id}`;
       await fetch(`${CORS_PROXY}${encodeURIComponent(prePlanUpdateUrl)}`, {
@@ -2871,11 +2880,17 @@ function renderCalendarView() {
     if (items.length === 0) {
       html += `<div style="font-size: 11px; color: #999; padding: 8px;">일정 없음</div>`;
     } else {
-      // 가나다순 정렬
+      // 책이름 + 제목으로 가나다순 정렬
       const sortedItems = items.sort((a, b) => {
         const titleA = getCalendarItemTitle(a);
         const titleB = getCalendarItemTitle(b);
-        return titleA.localeCompare(titleB, 'ko');
+        const bookRelationA = a.properties?.['책']?.relation?.[0];
+        const bookRelationB = b.properties?.['책']?.relation?.[0];
+        const bookNameA = bookRelationA && bookNames[bookRelationA.id] ? bookNames[bookRelationA.id] : '';
+        const bookNameB = bookRelationB && bookNames[bookRelationB.id] ? bookNames[bookRelationB.id] : '';
+        const displayTitleA = bookNameA ? `[${bookNameA}] ${titleA}` : titleA;
+        const displayTitleB = bookNameB ? `[${bookNameB}] ${titleB}` : titleB;
+        return displayTitleA.localeCompare(displayTitleB, 'ko');
       });
 
       sortedItems.forEach(item => {
