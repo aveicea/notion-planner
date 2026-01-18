@@ -27,7 +27,7 @@ function scheduleRefresh() {
   refreshTimer = setTimeout(() => {
     fetchAllData();
     refreshTimer = null;
-  }, 500); // 0.5초 후 새로고침
+  }, 2000); // 2초 후 새로고침
 }
 
 // 전역 함수 등록
@@ -655,6 +655,9 @@ window.duplicateTask = async function(taskId) {
       })
     });
 
+    // 즉시 UI 업데이트
+    await fetchAllData();
+    // 백그라운드에서 데이터 동기화
     scheduleRefresh();
   } catch (error) {
     console.error('복제 실패:', error);
@@ -1922,7 +1925,6 @@ function initSortable() {
 
       if (dragStartIndex !== dragEndIndex) {
         await updateTaskOrder();
-        scheduleRefresh();
       }
     });
 
@@ -1963,7 +1965,6 @@ function initSortable() {
 
         if (dragStartIndex !== dragEndIndex) {
           await updateTaskOrder();
-          scheduleRefresh();
         }
 
         draggedItem = null;
@@ -2001,7 +2002,6 @@ function initSortable() {
 
       if (dragStartIndex !== dragEndIndex) {
         await updateTaskOrder();
-        scheduleRefresh();
       }
 
       draggedItem = null;
@@ -2055,8 +2055,9 @@ async function updateTaskOrder() {
   }
   
   await Promise.all(updates);
-  
-  setTimeout(() => fetchAllData(), 1000);
+
+  // 즉시 UI 업데이트 (호출하는 곳에서 scheduleRefresh를 호출하므로 여기서는 렌더링만)
+  await fetchAllData();
 }
 
 async function updateNotionPage(pageId, properties) {
@@ -2325,6 +2326,9 @@ window.duplicateAllIncompleteTasks = async function() {
       if (!response.ok) continue;
     }
 
+    // 즉시 UI 업데이트
+    await fetchAllData();
+    // 백그라운드에서 데이터 동기화
     scheduleRefresh();
   } catch (error) {
     console.error('전체 복제 실패:', error);
@@ -2451,6 +2455,11 @@ window.updateCalendarItemDate = async function(itemId, newDate) {
       if (!response.ok) {
         throw new Error('날짜 업데이트 실패');
       }
+
+      // 즉시 UI 업데이트
+      renderCalendarView();
+      // 백그라운드에서 데이터 동기화
+      scheduleRefresh();
     } catch (error) {
       console.error('Error updating date:', error);
     }
