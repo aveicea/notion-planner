@@ -2253,23 +2253,25 @@ window.duplicateAllIncompleteTasks = async function() {
       return;
     }
 
-    // 모든 할일을 복제하고 원본 완료 처리
+    // 모든 할일을 복제 (원본 완료 처리 없이)
     for (const task of incompleteTasks) {
       const originalTitle = task.properties?.['범위']?.title?.[0]?.plain_text || '';
 
-      // (숫자) 찾아서 증가
-      const numberMatch = originalTitle.match(/\((\d+)\)$/);
-      let newTitle;
-      if (numberMatch) {
-        const num = parseInt(numberMatch[1]);
-        newTitle = originalTitle.replace(/\(\d+\)$/, `(${num + 1})`);
-      } else {
-        newTitle = originalTitle + ' (2)';
-      }
+      // ' 붙이기
+      const newTitle = originalTitle + "'";
 
       const bookRelation = task.properties?.['책']?.relation?.[0];
       const targetTime = task.properties?.['목표 시간']?.number;
       const dateStart = task.properties?.['날짜']?.date?.start;
+      const plannerRelation = task.properties?.['PLANNER']?.relation;
+
+      // 다음날로 날짜 설정
+      let nextDayStr = dateStart;
+      if (dateStart) {
+        const currentTaskDate = new Date(dateStart);
+        currentTaskDate.setDate(currentTaskDate.getDate() + 1);
+        nextDayStr = formatDateToLocalString(currentTaskDate);
+      }
 
       const properties = {
         '범위': {
@@ -2286,14 +2288,19 @@ window.duplicateAllIncompleteTasks = async function() {
         properties['목표 시간'] = { number: targetTime };
       }
 
-      if (dateStart) {
-        properties['날짜'] = { date: { start: dateStart } };
+      if (nextDayStr) {
+        properties['날짜'] = { date: { start: nextDayStr } };
       }
 
       // 우선순위 복사
       const priority = task.properties?.['우선순위']?.select?.name;
       if (priority) {
         properties['우선순위'] = { select: { name: priority } };
+      }
+
+      // PLANNER 관계형 복사
+      if (plannerRelation && plannerRelation.length > 0) {
+        properties['PLANNER'] = { relation: plannerRelation.map(r => ({ id: r.id })) };
       }
 
       // 복제 생성
@@ -2312,22 +2319,6 @@ window.duplicateAllIncompleteTasks = async function() {
       });
 
       if (!response.ok) continue;
-
-      // 원본 항목을 완료 처리
-      const updateUrl = `https://api.notion.com/v1/pages/${task.id}`;
-      await fetch(`${CORS_PROXY}${encodeURIComponent(updateUrl)}`, {
-        method: 'PATCH',
-        headers: {
-          'Authorization': `Bearer ${NOTION_API_KEY}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          properties: {
-            '완료': { checkbox: true }
-          }
-        })
-      });
     }
 
     scheduleRefresh();
